@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Settings, Calendar, Send } from 'lucide-react';
+import { BookOpen, Settings, Calendar, Database, AlertCircle, RefreshCw } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { ClassesTab } from './components/ClassesTab';
 import { SettingsTab } from './components/SettingsTab';
@@ -25,9 +25,15 @@ export default function App() {
     }
   }, []);
 
-  // Fetch initial students list & system status
-  useEffect(() => {
-    apiCall<{ students: Student[] }>('/api/demo/students')
+  const [loading, setLoading] = useState(true);
+
+  const fetchInitialData = useCallback(() => {
+    setLoading(true);
+    apiCall('/api/system/status')
+      .then((res) => setSystemStatus(res))
+      .catch((err) => console.error('Failed to load status:', err));
+
+    apiCall<{ students: Student[]; database_connected?: boolean; error?: string }>('/api/demo/students')
       .then((res) => {
         const list = res.students || [];
         setStudents(list);
@@ -38,6 +44,7 @@ export default function App() {
           const matched = list.find((s) => s.telegram_id === tgUser.id);
           if (matched) {
             setCurrentStudent(matched);
+            setLoading(false);
             return;
           }
         }
@@ -47,12 +54,14 @@ export default function App() {
           setCurrentStudent(list[0]);
         }
       })
-      .catch((err) => console.error('Failed to load students:', err));
-
-    apiCall('/api/system/status')
-      .then((res) => setSystemStatus(res))
-      .catch((err) => console.error('Failed to load status:', err));
+      .catch((err) => console.error('Failed to load students:', err))
+      .finally(() => setLoading(false));
   }, []);
+
+  // Fetch initial students list & system status
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
 
   const handleDataChanged = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -136,8 +145,64 @@ export default function App() {
             )}
           </div>
         ) : (
-          <div className="text-center py-16 text-slate-500 text-xs">
-            Loading student profile...
+          <div className="py-10 max-w-xl mx-auto">
+            {systemStatus && systemStatus.database_connected === false ? (
+              <div className="bg-white border border-amber-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 text-amber-700">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <span>Railway PostgreSQL Database</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                        Disconnected
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      The application is configured to strictly query your live Railway PostgreSQL database without fallback mock data.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 text-slate-700 font-semibold">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Connection Status</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-mono break-all bg-white p-2 rounded border border-slate-200">
+                    {systemStatus.database_error || 'DATABASE_URL is not set or credentials invalid.'}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-600">
+                  <p className="font-semibold text-slate-800">To connect Railway PostgreSQL:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-600">
+                    <li>In your Railway project, ensure a PostgreSQL service is added.</li>
+                    <li>Verify the <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">DATABASE_URL</code> variable is linked to your service.</li>
+                    <li>Deploy the changes; tables and university schema will sync automatically.</li>
+                  </ol>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    onClick={fetchInitialData}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                    <span>{loading ? 'Checking...' : 'Retry Connection'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-16 space-y-3">
+                <div className="w-8 h-8 mx-auto border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-slate-500 font-medium">
+                  {loading ? 'Connecting to University Database...' : 'No student records found in database.'}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </main>

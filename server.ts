@@ -223,10 +223,10 @@ function requireApiAuth(req: express.Request, res: express.Response, next: expre
 // ==========================================
 
 // Health check with explicit PostgreSQL connection check
-app.get(['/', '/api/health', '/api/health/'], (req, res) => {
+app.get(['/api/health', '/api/health/'], (req, res) => {
   const isHealthy = db.isConnected;
   const statusPayload = {
-    status: isHealthy ? 'healthy' : 'database_connection_error',
+    status: isHealthy ? 'healthy' : 'database_disconnected',
     service: 'INS Grades University Timetable API',
     security: 'API-Key & Telegram HMAC Enabled',
     database: 'Railway PostgreSQL',
@@ -234,9 +234,6 @@ app.get(['/', '/api/health', '/api/health/'], (req, res) => {
     database_error: isHealthy ? null : db.lastError || 'Railway PostgreSQL database is not connected.',
   };
 
-  if (!isHealthy) {
-    return res.status(503).json(statusPayload);
-  }
   return res.json(statusPayload);
 });
 
@@ -260,17 +257,35 @@ app.post(['/api/auth/session', '/api/auth/session/'], (req, res) => {
 
 app.get(['/api/system/status', '/api/system/status/'], requireApiAuth, (req, res) => {
   try {
-    const studentCount = db.query('SELECT COUNT(*) as c FROM students').rows[0]?.c || 0;
-    const classCount = db.query('SELECT COUNT(*) as c FROM classes').rows[0]?.c || 0;
+    const studentCount = db.isConnected ? (db.query('SELECT COUNT(*) as c FROM students').rows[0]?.c || 0) : 0;
+    const classCount = db.isConnected ? (db.query('SELECT COUNT(*) as c FROM classes').rows[0]?.c || 0) : 0;
     res.json({
       status: 'ok',
       database: 'Railway PostgreSQL',
       database_connected: db.isConnected,
+      database_error: db.isConnected ? null : db.lastError,
       bot_active: true,
       bot_username: 'INS_gradesbot',
       student_count: studentCount,
       class_count: classCount,
     });
+  } catch (err: any) {
+    res.status(503).json({ error: 'Database connection error', message: err.message });
+  }
+});
+
+app.get(['/api/demo/students', '/api/demo/students/'], requireApiAuth, (req, res) => {
+  try {
+    if (!db.isConnected) {
+      return res.json({ students: [], database_connected: false, error: db.lastError });
+    }
+    const students = db.query(
+      `SELECT s.student_id, s.full_name, s.telegram_id, s.telegram_username, g.group_name
+       FROM students s
+       JOIN groups g ON s.group_id = g.group_id
+       ORDER BY s.student_id`
+    ).rows;
+    res.json({ students, database_connected: true });
   } catch (err: any) {
     res.status(503).json({ error: 'Database connection error', message: err.message });
   }
