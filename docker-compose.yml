@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:3000"
+    environment:
+      - PORT=3000
+      - DJANGO_SECRET_KEY=django-insecure-ins-grades-secret-key-change-in-production
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
+      - DB_HOST=postgres.railway.internal
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=your_password_here
+      - DB_NAME=railway
+      - DB_SSLMODE=prefer
+      - API_KEY=ins_secure_api_key_2026_x89a
+      - TELEGRAM_BOT_TOKEN=your_token_here
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    environment:
+      - TELEGRAM_BOT_TOKEN=your_token_here
+      - API_URL=http://backend:3000
+      - API_KEY=ins_secure_api_key_2026_x89a
+      - APP_URL=https://ins-grades.vercel.app
+    depends_on:
+      - backend
+    restart: unless-stopped

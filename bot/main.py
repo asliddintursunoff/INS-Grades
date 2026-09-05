@@ -1,87 +1,70 @@
 import os
+import sys
+import time
 import asyncio
 import logging
-import httpx
 from datetime import datetime
-from typing import Optional, Dict, Any
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+import httpx
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("ins_grades_bot")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("TelegramBot")
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A")
-API_URL = os.getenv("API_URL", "http://localhost:3000").rstrip("/")
-INTERNAL_KEY = os.getenv("INTERNAL_KEY", "ins_secret_internal_key_2025")
-APP_URL = os.getenv("APP_URL", "https://ins-grades.vercel.app").rstrip("/")
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+API_URL = (os.getenv("API_URL") or "http://backend:3000").rstrip("/")
+API_KEY = os.getenv("API_KEY", "ins_secure_api_key_2026_x89a")
+APP_URL = os.getenv("APP_URL", "https://ins-grades.vercel.app")
 
-class StandaloneTelegramBot:
-    def __init__(self, token: str, api_url: str, app_url: str, internal_key: str):
+DAY_NAMES = {
+    1: "Monday",
+    2: "Tuesday",
+    3: "Wednesday",
+    4: "Thursday",
+    5: "Friday",
+    6: "Saturday",
+    7: "Sunday",
+}
+
+
+class TimetableTelegramBot:
+    def __init__(self, token: str, api_url: str):
         self.token = token
         self.api_url = api_url
-        self.app_url = app_url
-        self.internal_key = internal_key
-        self.tg_url = f"https://api.telegram.org/bot{self.token}"
-        self.offset = 0
-        self.is_running = False
-        self.client: Optional[httpx.AsyncClient] = None
+        self.tg_base = f"https://api.telegram.org/bot{token}"
+        self.client = httpx.AsyncClient(timeout=30.0)
+        self.is_running = True
 
-    async def call_tg(self, method: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
-        if not self.client:
-            self.client = httpx.AsyncClient(timeout=35.0)
+    async def api_get(self, endpoint: str):
+        """Helper to call Django REST API."""
+        url = f"{self.api_url}/api/{endpoint.lstrip('/')}"
+        headers = {"X-API-KEY": API_KEY}
         try:
-            resp = await self.client.post(f"{self.tg_url}/{method}", json=data or {})
-            return resp.json()
+            r = await self.client.get(url, headers=headers, timeout=10.0)
+            if r.status_code == 200:
+                return r.json()
+            return None
         except Exception as e:
-            logger.warning(f"Telegram API call error {method}: {e}")
-            return {"ok": False, "error": str(e)}
+            logger.error(f"[API Error] GET {url}: {e}")
+            return None
 
-    async def api_get(self, endpoint: str) -> Optional[Dict[str, Any]]:
-        headers = {"X-Internal-Key": self.internal_key}
+    async def api_post(self, endpoint: str, data: dict):
+        """Helper to call Django REST API POST."""
+        url = f"{self.api_url}/api/{endpoint.lstrip('/')}"
+        headers = {"X-API-KEY": API_KEY}
         try:
-            async with httpx.AsyncClient(timeout=15.0) as http:
-                resp = await http.get(f"{self.api_url}{endpoint}", headers=headers)
-                if resp.status_code == 200:
-                    return resp.json()
+            r = await self.client.post(url, json=data, headers=headers, timeout=10.0)
+            if r.status_code in (200, 201):
+                return r.json()
+            return None
         except Exception as e:
-            logger.error(f"Backend API GET error {endpoint}: {e}")
-        return None
+            logger.error(f"[API Error] POST {url}: {e}")
+            return None
 
-    async def api_post(self, endpoint: str, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        headers = {"X-Internal-Key": self.internal_key}
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as http:
-                resp = await http.post(f"{self.api_url}{endpoint}", json=body, headers=headers)
-                if resp.status_code == 200:
-                    return resp.json()
-        except Exception as e:
-            logger.error(f"Backend API POST error {endpoint}: {e}")
-        return None
-
-    def get_keyboard(self):
-        return {
-            "keyboard": [
-                [
-                    {"text": "📱 Open INS grades", "web_app": {"url": self.app_url}},
-                    {"text": "📅 Today"},
-                ],
-                [
-                    {"text": "📆 Full Week"},
-                    {"text": "🔄 Make-up Slot"},
-                ],
-                [
-                    {"text": "👤 My Profile"},
-                    {"text": "🔔 Reminders"},
-                ]
-            ],
-            "resize_keyboard": True,
-            "persistent": True
-        }
-
-    async def send_message(self, chat_id: int, text: str, reply_markup: Any = None):
+    async def send_message(self, chat_id: int, text: str, reply_markup: dict = None):
+        """Send a message to a Telegram user."""
+        url = f"{self.tg_base}/sendMessage"
         payload = {
             "chat_id": chat_id,
             "text": text,
@@ -89,244 +72,245 @@ class StandaloneTelegramBot:
         }
         if reply_markup:
             payload["reply_markup"] = reply_markup
-        await self.call_tg("sendMessage", payload)
+        try:
+            r = await self.client.post(url, json=payload, timeout=10.0)
+            return r.json()
+        except Exception as e:
+            logger.error(f"[TG Error] send_message: {e}")
+            return None
 
-    async def set_menu_button(self):
-        if self.app_url:
-            await self.call_tg("setChatMenuButton", {
-                "menu_button": {
-                    "type": "web_app",
-                    "text": "📱 INS grades App",
-                    "web_app": {"url": self.app_url}
-                }
-            })
-
-    async def handle_start(self, chat_id: int, user: Dict[str, Any]):
+    async def handle_start(self, chat_id: int, user: dict):
+        """Handle /start command."""
         tg_id = user.get("id")
         first_name = user.get("first_name", "Student")
 
-        me_data = await self.api_get(f"/api/auth/me/{tg_id}")
-        if me_data and me_data.get("found"):
-            st = me_data["student"]
+        # Check if already linked
+        student_data = await self.api_get(f"students/?telegram_id={tg_id}")
+        linked = student_data and len(student_data) > 0
+
+        if linked:
+            s = student_data[0]
             msg = (
-                f"👋 <b>Welcome back, {st['full_name']}!</b>\n\n"
-                f"🎓 <b>Student ID:</b> <code>{st['student_id']}</code>\n"
-                f"👥 <b>Group:</b> {st['group_name']}\n\n"
-                f"Tap below to launch your <b>INS grades Mini App</b> to check timetable, attendances, and drop/retake courses."
+                f"👋 Welcome back, <b>{s['full_name']}</b>!\n\n"
+                f"🎓 <b>Student ID:</b> <code>{s['student_id']}</code>\n"
+                f"👥 <b>Group:</b> {s.get('group_name', 'Assigned')}\n\n"
+                f"Commands:\n"
+                f"📅 /today - Today's Schedule\n"
+                f"🗓 /week - Full Week Timetable\n"
+                f"📝 /homework - Pending Assignments\n"
+                f"📊 /attendance - Absences & Status\n"
             )
-            inline_kb = {
-                "inline_keyboard": [
-                    [{"text": "📱 Launch INS grades App", "web_app": {"url": self.app_url}}]
-                ]
-            }
-            await self.send_message(chat_id, msg, reply_markup=inline_kb)
         else:
             msg = (
-                f"👋 <b>Hello, {first_name}! Welcome to INS grades!</b>\n\n"
-                f"Your Telegram account is not yet connected to a Student ID.\n\n"
-                f"📝 <b>Please enter your Student ID</b> (e.g. <code>U2410252</code>) directly in this chat, "
-                f"or open the Web App below to login."
+                f"👋 Hello, <b>{first_name}</b>!\n\n"
+                f"Welcome to the <b>INS Grades University Bot</b>.\n\n"
+                f"To view your personalized timetable and receive lecture reminders, "
+                f"please reply with your <b>Student ID</b> (e.g. <code>U2110001</code>)."
             )
-            inline_kb = {
-                "inline_keyboard": [
-                    [{"text": "📱 Open INS grades Web App", "web_app": {"url": self.app_url}}]
-                ]
-            }
-            await self.send_message(chat_id, msg, reply_markup=inline_kb)
 
-        await self.send_message(chat_id, "Choose an option from the menu:", reply_markup=self.get_keyboard())
+        reply_markup = {
+            "inline_keyboard": [
+                [{"text": "📱 Open University WebApp", "web_app": {"url": APP_URL}}]
+            ]
+        } if APP_URL else None
 
-    async def handle_text(self, chat_id: int, user: Dict[str, Any], text: str):
+        await self.send_message(chat_id, msg, reply_markup=reply_markup)
+
+    async def handle_text(self, chat_id: int, user: dict, text: str):
+        """Handle text input from user."""
+        text = text.strip()
         tg_id = user.get("id")
         username = user.get("username", "")
-        clean_text = text.strip()
 
-        # Link account
-        if clean_text.upper().startswith("U2") and len(clean_text) >= 8:
-            link_res = await self.api_post("/api/auth/link", {
-                "student_id": clean_text,
-                "telegram_id": tg_id,
-                "telegram_username": username
-            })
-            if link_res and link_res.get("success"):
-                msg = (
-                    f"✅ <b>Successfully connected!</b>\n\n"
-                    f"👤 <b>Name:</b> {link_res['full_name']}\n"
-                    f"🎓 <b>ID:</b> {link_res['student_id']}\n"
-                    f"👥 <b>Group:</b> {link_res['group_name']}\n\n"
-                    f"You will now receive automatic class reminders and can manage your classes seamlessly."
-                )
-                inline_kb = {
-                    "inline_keyboard": [
-                        [{"text": "📱 Open INS grades", "web_app": {"url": self.app_url}}]
-                    ]
-                }
-                await self.send_message(chat_id, msg, reply_markup=inline_kb)
-                return
+        if text.startswith("/"):
+            cmd = text.lower().split()[0]
+            if cmd in ("/start", "/help"):
+                await self.handle_start(chat_id, user)
+            elif cmd == "/today":
+                await self.handle_today(chat_id, tg_id)
+            elif cmd in ("/week", "/schedule"):
+                await self.handle_week(chat_id, tg_id)
+            elif cmd == "/homework":
+                await self.handle_homework(chat_id, tg_id)
+            elif cmd == "/attendance":
+                await self.handle_attendance(chat_id, tg_id)
             else:
-                await self.send_message(
-                    chat_id,
-                    f"❌ Student ID <code>{clean_text}</code> was not found in university records.\n"
-                    f"Please contact admin: @asliddin_tursunoff"
-                )
-                return
+                await self.send_message(chat_id, "Unknown command. Use /today, /week, /homework, or /attendance.")
+            return
 
-        if clean_text in ["📅 Today", "/today"]:
-            data = await self.api_get(f"/api/students/{tg_id}/timetable/")
-            if not data or "schedule" not in data:
-                await self.send_message(chat_id, "Could not fetch schedule. Please verify your Student ID link.")
-                return
+        # Attempt to link student ID
+        student_id_candidate = text.upper()
+        res = await self.api_post("students/link-telegram/", {
+            "student_id": student_id_candidate,
+            "telegram_id": tg_id,
+            "telegram_username": username
+        })
 
-            now = datetime.now()
-            today_day = now.weekday() + 1
-            today_classes = [s for s in data["schedule"] if s.get("day_of_week") == today_day]
-            if not today_classes:
-                await self.send_message(chat_id, "🎉 <b>No classes scheduled for today!</b> Enjoy your free day.")
-                return
-
-            lines = [f"📅 <b>Today's Schedule:</b>\n"]
-            for idx, c in enumerate(today_classes, 1):
-                note = f" <i>({c['make_up_note']})</i>" if c.get("make_up_note") else ""
-                lines.append(
-                    f"<b>{idx}. {c['start_time']} - {c['end_time']}</b> | {c['subject_short']}\n"
-                    f"   📚 {c['subject_full']}\n"
-                    f"   👨‍🏫 {c['professor']} • 🚪 Room: <b>{c['room']}</b>{note}\n"
-                )
-            await self.send_message(chat_id, "\n".join(lines))
-
-        elif clean_text in ["📆 Full Week", "/schedule", "/timetable"]:
-            data = await self.api_get(f"/api/students/{tg_id}/timetable/")
-            if not data or "schedule" not in data:
-                await self.send_message(chat_id, "Could not fetch timetable.")
-                return
-
-            sched = data["schedule"]
-            lines = [f"📆 <b>Full Weekly Schedule for {data.get('student_name', '')} ({data.get('group_name', '')}):</b>\n"]
-            current_day = None
-            for c in sched:
-                if c["day_of_week"] != current_day:
-                    current_day = c["day_of_week"]
-                    lines.append(f"\n📌 <b>{c['day_name'].upper()}</b>")
-                lines.append(f"  • <b>{c['start_time']} - {c['end_time']}</b>: {c['subject_short']} ({c['room']}) - {c['professor']}")
-
-            await self.send_message(chat_id, "\n".join(lines))
-
-        elif clean_text in ["🔄 Make-up Slot", "/absences", "/makeup"]:
-            data = await self.api_get(f"/api/students/{tg_id}/absences/")
-            absences = data.get("absences", []) if data else []
-            if not absences:
-                await self.send_message(chat_id, "✅ <b>You have 0 unexcused absences!</b> Excellent attendance.")
-                return
-
-            lines = ["⚠️ <b>Your Absences eligible for Make-up:</b>\n"]
-            for a in absences[:5]:
-                lines.append(f"• <b>{a['subject_short']}</b>: {a['session_date']} ({a['start_time']}) - Room {a['room']}")
-            lines.append("\nOpen the Mini App to view free parallel slots and select your make-up time!")
-            inline_kb = {
-                "inline_keyboard": [
-                    [{"text": "🔄 Schedule Make-up in App", "web_app": {"url": self.app_url}}]
-                ]
-            }
-            await self.send_message(chat_id, "\n".join(lines), reply_markup=inline_kb)
-
-        elif clean_text in ["👤 My Profile", "/profile"]:
-            me_data = await self.api_get(f"/api/auth/me/{tg_id}")
-            if me_data and me_data.get("found"):
-                st = me_data["student"]
-                msg = (
-                    f"👤 <b>Student Profile:</b>\n\n"
-                    f"<b>Name:</b> {st['full_name']}\n"
-                    f"<b>ID:</b> <code>{st['student_id']}</code>\n"
-                    f"<b>Group:</b> {st['group_name']}\n"
-                    f"<b>Year:</b> Year {st.get('year_of_study', 2)}\n\n"
-                    f"👨‍💻 <b>Developer:</b> @asliddin_tursunoff"
-                )
-                await self.send_message(chat_id, msg)
-            else:
-                await self.send_message(chat_id, "Please link your Student ID first (e.g. <code>U2410252</code>).")
-
-        elif clean_text in ["🔔 Reminders", "/reminders"]:
-            data = await self.api_get(f"/api/students/{tg_id}/notification-settings/")
-            if data:
-                status = "ON 🟢" if data.get("enabled") else "OFF 🔴"
-                mins = data.get("minutes_before", 30)
-                msg = (
-                    f"🔔 <b>Notification Settings:</b>\n\n"
-                    f"Status: <b>{status}</b>\n"
-                    f"Notice window: <b>{mins} minutes</b> before class begins.\n\n"
-                    f"You can customize timing in the Web App settings."
-                )
-                await self.send_message(chat_id, msg)
-            else:
-                await self.send_message(chat_id, "Could not fetch reminder settings.")
-
-        elif clean_text in ["/help", "help", "Help"]:
+        if res and "student" in res:
+            s = res["student"]
             msg = (
-                "ℹ️ <b>INS grades Bot Help:</b>\n\n"
-                "• /start - Welcome & Open Web App\n"
-                "• /today - View today's classes\n"
-                "• /schedule - View full weekly timetable\n"
-                "• /absences - View missed lessons & make-ups\n"
-                "• /profile - Student info and group\n"
-                "• /reminders - Check notification status\n\n"
-                "💡 <i>Tip: Tap the button below to open the interactive INS grades interface!</i>"
+                f"✅ <b>Successfully Linked!</b>\n\n"
+                f"Welcome, <b>{s['full_name']}</b>!\n"
+                f"Student ID: <code>{s['student_id']}</code>\n"
+                f"Group: {s.get('group_name', 'Assigned')}\n\n"
+                f"You will now receive automated 30-minute notifications before each lecture.\n\n"
+                f"Try /today or /week to check your schedule."
             )
-            inline_kb = {
-                "inline_keyboard": [
-                    [{"text": "📱 Open INS grades", "web_app": {"url": self.app_url}}]
-                ]
-            }
-            await self.send_message(chat_id, msg, reply_markup=inline_kb)
-
+            await self.send_message(chat_id, msg)
         else:
             await self.send_message(
                 chat_id,
-                f"Received: <i>{clean_text}</i>\nUse the buttons below or launch the Mini App:",
-                reply_markup=self.get_keyboard()
+                f"❌ Could not find a student with ID <code>{student_id_candidate}</code>.\n"
+                f"Please verify your Student ID and try again, or check the WebApp."
             )
 
-    async def poll_updates(self):
-        logger.info("[TelegramBot Worker] Starting update polling loop...")
+    async def handle_today(self, chat_id: int, tg_id: int):
+        """Send today's schedule to the student."""
+        students = await self.api_get(f"students/?telegram_id={tg_id}")
+        if not students or len(students) == 0:
+            await self.send_message(chat_id, "⚠️ Your account is not linked. Please send your Student ID first.")
+            return
+
+        student = students[0]
+        tt_data = await self.api_get(f"timetable/student/{student['student_id']}/")
+        if not tt_data or "timetable" not in tt_data:
+            await self.send_message(chat_id, "⚠️ No timetable found for your account.")
+            return
+
+        # Python weekday: Mon=0, Sun=6 -> Map to 1..7
+        current_day = datetime.now().weekday() + 1
+        today_name = DAY_NAMES.get(current_day, "Today")
+
+        slots = [s for s in tt_data["timetable"] if s.get("day_of_week") == current_day]
+
+        if not slots:
+            await self.send_message(chat_id, f"🎉 <b>No classes scheduled for {today_name}!</b> Enjoy your free day.")
+            return
+
+        lines = [f"📅 <b>Today's Schedule ({today_name})</b>\n"]
+        for s in slots:
+            lines.append(
+                f"🕒 <b>{s['start_time']} - {s['end_time']}</b>\n"
+                f"📖 {s['subject']} ({s['subject_short']})\n"
+                f"🚪 Room: <b>{s['room'] or 'TBA'}</b> | 👨‍🏫 {s['professor']}\n"
+            )
+
+        await self.send_message(chat_id, "\n".join(lines))
+
+    async def handle_week(self, chat_id: int, tg_id: int):
+        """Send weekly timetable overview."""
+        students = await self.api_get(f"students/?telegram_id={tg_id}")
+        if not students or len(students) == 0:
+            await self.send_message(chat_id, "⚠️ Your account is not linked. Please send your Student ID first.")
+            return
+
+        student = students[0]
+        tt_data = await self.api_get(f"timetable/student/{student['student_id']}/")
+        if not tt_data or "timetable" not in tt_data:
+            await self.send_message(chat_id, "⚠️ No timetable found.")
+            return
+
+        lines = [f"🗓 <b>Weekly Schedule for {student['full_name']}</b>\n"]
+        for day_num in range(1, 7):
+            day_slots = [s for s in tt_data["timetable"] if s.get("day_of_week") == day_num]
+            if day_slots:
+                lines.append(f"<b>{DAY_NAMES.get(day_num)}:</b>")
+                for s in day_slots:
+                    lines.append(f"  • {s['start_time']}-{s['end_time']}: {s['subject_short']} ({s['room']})")
+                lines.append("")
+
+        await self.send_message(chat_id, "\n".join(lines))
+
+    async def handle_homework(self, chat_id: int, tg_id: int):
+        """Send homework status."""
+        students = await self.api_get(f"students/?telegram_id={tg_id}")
+        if not students or len(students) == 0:
+            await self.send_message(chat_id, "⚠️ Please link your Student ID first.")
+            return
+
+        student = students[0]
+        hw_list = await self.api_get(f"homework/student/{student['student_id']}/")
+        if not hw_list:
+            await self.send_message(chat_id, "✅ No active homework assignments found.")
+            return
+
+        lines = ["📝 <b>Homework Assignments:</b>\n"]
+        for hw in hw_list:
+            status_emoji = "✅" if hw.get("is_done") else "⏳"
+            lines.append(
+                f"{status_emoji} <b>{hw['title']}</b> ({hw['subject_short']})\n"
+                f"⏰ Deadline: {hw['deadline']}\n"
+            )
+
+        await self.send_message(chat_id, "\n".join(lines))
+
+    async def handle_attendance(self, chat_id: int, tg_id: int):
+        """Send attendance summary."""
+        students = await self.api_get(f"students/?telegram_id={tg_id}")
+        if not students or len(students) == 0:
+            await self.send_message(chat_id, "⚠️ Please link your Student ID first.")
+            return
+
+        student = students[0]
+        att = await self.api_get(f"attendance/student/{student['student_id']}/")
+        if not att or "summary" not in att:
+            await self.send_message(chat_id, "📊 No attendance records found.")
+            return
+
+        s = att["summary"]
+        warning = "\n⚠️ <b>Warning:</b> Absence threshold reached!" if s["absent"] >= 3 else ""
+        msg = (
+            f"📊 <b>Attendance Summary</b>\n\n"
+            f"Student: <b>{student['full_name']}</b>\n"
+            f"❌ Unexcused Absences: <b>{s['absent']}</b>\n"
+            f"✅ Present Lectures: <b>{s['present']}</b>\n"
+            f"📋 Excused Absences: <b>{s['excused']}</b>"
+            f"{warning}"
+        )
+        await self.send_message(chat_id, msg)
+
+    async def run_polling(self):
+        """Main Telegram updates polling loop."""
+        offset = 0
+        logger.info("[TelegramBot] Polling loop started...")
         while self.is_running:
             try:
-                res = await self.call_tg("getUpdates", {
-                    "offset": self.offset,
-                    "timeout": 20,
-                    "allowed_updates": ["message", "callback_query"]
-                })
-                if res.get("ok") and "result" in res:
-                    for update in res["result"]:
-                        self.offset = update["update_id"] + 1
-                        msg = update.get("message")
+                url = f"{self.tg_base}/getUpdates?offset={offset}&timeout=20"
+                res = await self.client.get(url, timeout=25.0)
+                data = res.json()
+
+                if data.get("ok"):
+                    for update in data.get("result", []):
+                        offset = update["update_id"] + 1
+                        msg = update.get("message") or update.get("edited_message")
                         if not msg:
                             continue
                         chat_id = msg["chat"]["id"]
                         user = msg.get("from", {})
-                        text = msg.get("text", "").strip()
+                        text = msg.get("text", "")
 
-                        if text == "/start" or text.startswith("/start "):
-                            await self.handle_start(chat_id, user)
-                        elif text:
+                        if text:
                             await self.handle_text(chat_id, user, text)
+                elif data.get("error_code") == 409:
+                    logger.warning("[TelegramBot] 409 Conflict (another instance running). Backing off for 15s...")
+                    await asyncio.sleep(15)
+                else:
+                    logger.debug(f"[TelegramBot] Response: {data}")
+                    await asyncio.sleep(2)
             except Exception as e:
-                logger.error(f"Error in poll_updates: {e}")
-                await asyncio.sleep(3)
+                logger.error(f"[TelegramBot] Polling error: {e}")
+                await asyncio.sleep(5)
 
-            await asyncio.sleep(0.5)
-
-    async def run(self):
-        if not self.token or "MY_BOT_TOKEN" in self.token:
-            logger.warning("TELEGRAM_BOT_TOKEN not provided. Worker paused.")
-            return
-
-        self.is_running = True
-        logger.info(f"Bot worker started. Backend API: {self.api_url}, App: {self.app_url}")
-        await self.set_menu_button()
-        await self.poll_updates()
 
 async def main():
-    bot = StandaloneTelegramBot(BOT_TOKEN, API_URL, APP_URL, INTERNAL_KEY)
-    await bot.run()
+    if not BOT_TOKEN:
+        logger.warning("[TelegramBot] TELEGRAM_BOT_TOKEN not provided. Bot is idling.")
+        while True:
+            await asyncio.sleep(60)
+
+    bot = TimetableTelegramBot(BOT_TOKEN, API_URL)
+    await bot.run_polling()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
