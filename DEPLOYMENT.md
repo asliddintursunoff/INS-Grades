@@ -21,22 +21,31 @@ This repository is split into three clean services for effortless deployment:
 
 ---
 
-## 2. 🚂 Deploy Backend (Python / FastAPI) to Railway
+## 2. 🚂 Deploy Backend (Python / FastAPI) to Railway with PostgreSQL
 
-1. Go to [railway.com](https://railway.com) and click **"New Project"** -> **"Deploy from GitHub repo"**.
-2. Select `asliddintursunoff/INS-Grades`.
-3. In service settings, set **Root Directory** to `backend`.
-4. In **Variables**, add:
+1. Go to [railway.com](https://railway.com) and click **"New Project"**.
+2. **Add PostgreSQL Database**:
+   - Click **"+ New"** -> **"Database"** -> **"Add PostgreSQL"**.
+   - Railway will provision a high-performance PostgreSQL database immediately.
+3. **Deploy Backend Service**:
+   - In the same project, click **"+ New"** -> **"GitHub Repo"**.
+   - Select `asliddintursunoff/INS-Grades`.
+   - In settings, set **Root Directory** to `backend`.
+4. **Link PostgreSQL to Backend**:
+   - Go to your backend service -> **Variables** tab.
+   - Click **"Add Reference"** or select `DATABASE_URL` from the PostgreSQL service.
+   - Railway will inject `DATABASE_URL` into your backend automatically.
+5. In **Variables**, also add:
    - `PORT`: `3000` (or leave default `$PORT`)
    - `TELEGRAM_BOT_TOKEN`: `7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A`
    - `APP_URL`: Your Vercel frontend URL (e.g. `https://ins-grades.vercel.app`)
    - `INTERNAL_KEY`: `ins_secret_internal_key_2025`
-5. Railway will automatically detect Python, install dependencies via `requirements.txt`, and execute:
+6. Railway will automatically build and start the server with:
    ```bash
    uvicorn main:app --host 0.0.0.0 --port $PORT
    ```
-6. In Railway **Settings** -> **Networking**, click **"Generate Domain"** to get your public backend URL.
-7. Note: The backend already contains an embedded asynchronous Telegram Bot (`telegram_bot.py`) that starts automatically and sends class reminders!
+   On startup, the backend connects to your Railway PostgreSQL database, initializes all tables, and auto-seeds the full university schedule and professor directory!
+7. In Railway **Settings** -> **Networking**, click **"Generate Domain"** to get your public backend URL.
 
 ---
 
@@ -68,7 +77,7 @@ PORT=3000
 TELEGRAM_BOT_TOKEN=7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A
 APP_URL=https://ins-grades.vercel.app
 INTERNAL_KEY=ins_secret_internal_key_2025
-DATABASE_PATH=data/timetable.db
+DATABASE_URL=postgresql://postgres:password@host:port/railway
 ```
 
 ### Bot Worker (`bot/.env`)

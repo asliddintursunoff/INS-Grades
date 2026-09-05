@@ -130,21 +130,28 @@ class MarkSentRequest(BaseModel):
 
 @app.get("/")
 @app.get("/api/health")
+@app.get("/api/health/")
 def health_check():
+    from database import USE_POSTGRES, is_postgres_active
     return {
         "status": "healthy",
         "framework": "FastAPI (Python)",
         "service": "INS Grades Backend",
+        "database": "Railway PostgreSQL" if USE_POSTGRES else "Memory Mock (Offline)",
+        "postgres_connected": is_postgres_active(),
         "developer": "@asliddin_tursunoff"
     }
 
 @app.get("/api/system/status")
+@app.get("/api/system/status/")
 def system_status():
+    from database import USE_POSTGRES, is_postgres_active
     student_count = query("SELECT COUNT(*) as c FROM students")[0]["c"]
     class_count = query("SELECT COUNT(*) as c FROM classes")[0]["c"]
     return {
         "status": "ok",
-        "database": "SQLite / Railway persistent storage",
+        "database": "Railway PostgreSQL" if USE_POSTGRES else "Memory Mock (Offline)",
+        "postgres_connected": is_postgres_active(),
         "framework": "FastAPI (Python)",
         "bot_active": True,
         "bot_username": "INS_gradesbot",
