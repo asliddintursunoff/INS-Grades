@@ -92,6 +92,7 @@ def _get_connection_candidates() -> List[Dict[str, Any]]:
             })
 
     # Fallback: Parse DATABASE_URL and DATABASE_PUBLIC_URL
+    urls_to_try = []
     db_url = os.getenv("DATABASE_URL")
     pub_url = os.getenv("DATABASE_PUBLIC_URL")
     if db_url:
