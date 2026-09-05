@@ -1,33 +1,34 @@
-# INS Grades - Backend & Telegram Bot (Railway Deployment)
+# INS Grades - Python FastAPI Backend & Telegram Bot
 
-This is the Express REST API and automated Telegram Bot service for **INS Grades**.
+Powered by **FastAPI** + **Python 3.11** + **SQLite / Railway**.
+Authored & Configured by `@asliddin_tursunoff`.
 
-## 🚀 Quick Railway Deployment
+## 🚀 Key Highlights
+- **Framework:** FastAPI (high-performance asynchronous Python REST API)
+- **Automatic Docs:** Swagger UI at `/docs` and ReDoc at `/redoc`
+- **Telegram Bot:** Asynchronous polling & reminder scheduler embedded (`telegram_bot.py`)
+- **Compatibility:** 100% compatible with the React frontend on Vercel
+- **Zero-Config Railway Deployment:** Natively runs on Railway via Nixpacks or Dockerfile
 
-### Step 1: Create a Project on Railway
-1. Go to [railway.com](https://railway.com) and log in.
-2. Click **"New Project"** -> **"Deploy from GitHub repo"**.
-3. Select your repository.
+## 🛠 Local Setup
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
 
-### Step 2: Configure Service Root Directory
-1. In your Railway service settings (**Settings** tab), find **Root Directory**.
-2. Set **Root Directory** to: `backend`
-3. Railway automatically detects Nixpacks and runs:
-   - Build: `npm run build`
-   - Start: `npm run start:dev` (or `npm start`)
+# Start development server
+uvicorn main:app --reload --port 3000
+```
 
-### Step 3: Add Variables in Railway
-Under the **Variables** tab in Railway, add:
-
-| Variable | Recommended Value | Description |
-|----------|-------------------|-------------|
-| `PORT` | `3000` | (Railway assigns its own port automatically, but good to have fallback) |
-| `TELEGRAM_BOT_TOKEN` | `8234622386:AAGRh0DIzbn4BrG-gGBWiuTzMHu6l0chciE` | Your Telegram Bot token from @BotFather |
-| `APP_URL` | `https://your-frontend.vercel.app` | Your frontend WebApp URL deployed on Vercel |
-| `INTERNAL_API_KEY` | `uni-system-internal-secret-key-2026` | Security secret for internal bot calls |
-| `DATABASE_URL` | *(Optional)* | Link a Railway PostgreSQL database here. If left empty, SQLite with full schema runs automatically! |
-
-### Step 4: Generate a Public Domain
-1. In Railway under **Settings** -> **Networking**, click **"Generate Domain"**.
-2. You will get a domain like: `https://ins-grades-production.up.railway.app`.
-3. Copy this URL and set it as `VITE_API_URL` in your Vercel frontend!
+## 🌐 Deploy to Railway
+1. Push this folder to your GitHub repo (`asliddintursunoff/INS-Grades`).
+2. In [Railway.com](https://railway.com), create a new project from your repo.
+3. Set the **Root Directory** to `backend`.
+4. Add environment variables in Railway:
+   - `PORT`: `3000` (or Railway's default `$PORT`)
+   - `TELEGRAM_BOT_TOKEN`: `7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A`
+   - `APP_URL`: `https://ins-grades.vercel.app` (your Vercel frontend URL)
+   - `INTERNAL_KEY`: `ins_secret_internal_key_2025`
+5. Railway will automatically build and start the server with:
+   `uvicorn main:app --host 0.0.0.0 --port $PORT`

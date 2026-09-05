@@ -1,123 +1,80 @@
-# 🚀 INS Grades - Full Deployment Guide (Vercel + Railway)
+# INS Grades — Deployment Guide (FastAPI + React + Telegram Bot)
 
-This repository is organized into distinct, production-ready modules:
-
-- **`frontend/`** ➔ **Vercel** (React 19 + Vite + Tailwind Mini App)
-- **`backend/`** ➔ **Railway** (Express REST API + Database + Telegram Bot + Schedulers)
-- **`bot/`** ➔ **Railway** (Optional: Dedicated standalone Telegram Bot worker service)
-
----
-
-## 📦 Architecture Overview
+This repository is split into three clean services for effortless deployment:
 
 ```
-├── frontend/             # Deploy this folder to VERCEL
-│   ├── package.json
-│   ├── vercel.json
-│   ├── vite.config.ts
-│   ├── .env.example
-│   ├── src/
-│   └── public/
-│
-├── backend/              # Deploy this folder to RAILWAY
-│   ├── package.json
-│   ├── Procfile
-│   ├── railway.json
-│   ├── .env.example
-│   ├── server.ts
-│   ├── db.ts
-│   ├── services/
-│   └── telegram_bot.ts
-│
-├── bot/                  # (Optional) Standalone Bot worker on Railway
-│   ├── package.json
-│   ├── bot_worker.ts
-│   └── railway.json
-│
-└── DEPLOYMENT.md         # This deployment guide
+├── frontend/      # React + Vite + Tailwind (Deploy to Vercel)
+├── backend/       # Python + FastAPI + SQLite (Deploy to Railway)
+└── bot/           # Python Standalone Telegram Bot worker (Optional Railway worker)
 ```
 
 ---
 
-## Part 1: Push Code to GitHub
+## 1. 🌐 Deploy Frontend to Vercel
 
-You can push this project to your GitHub repository using either of these two methods:
+1. Go to [vercel.com](https://vercel.com) and click **"Add New Project"**.
+2. Select your repository: `asliddintursunoff/INS-Grades`.
+3. Set the **Root Directory** to `frontend`.
+4. Add the following **Environment Variable**:
+   - `VITE_API_URL`: The URL of your Railway backend (e.g. `https://ins-grades-backend.up.railway.app`).
+5. Click **Deploy**. Vercel will build and assign you a domain (e.g. `https://ins-grades.vercel.app`).
 
-### Method A: Export directly via Google AI Studio
-1. Open the **Settings / Export** menu in Google AI Studio.
-2. Select **Export to GitHub** or **Download ZIP**.
-3. If downloading ZIP, extract and push to your GitHub repo.
+---
 
-### Method B: Using Git in Terminal
-Run the following commands in the project directory:
+## 2. 🚂 Deploy Backend (Python / FastAPI) to Railway
 
-```bash
-# 1. Add your GitHub repository as origin
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+1. Go to [railway.com](https://railway.com) and click **"New Project"** -> **"Deploy from GitHub repo"**.
+2. Select `asliddintursunoff/INS-Grades`.
+3. In service settings, set **Root Directory** to `backend`.
+4. In **Variables**, add:
+   - `PORT`: `3000` (or leave default `$PORT`)
+   - `TELEGRAM_BOT_TOKEN`: `7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A`
+   - `APP_URL`: Your Vercel frontend URL (e.g. `https://ins-grades.vercel.app`)
+   - `INTERNAL_KEY`: `ins_secret_internal_key_2025`
+5. Railway will automatically detect Python, install dependencies via `requirements.txt`, and execute:
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port $PORT
+   ```
+6. In Railway **Settings** -> **Networking**, click **"Generate Domain"** to get your public backend URL.
+7. Note: The backend already contains an embedded asynchronous Telegram Bot (`telegram_bot.py`) that starts automatically and sends class reminders!
 
-# 2. Rename branch to main (if not already)
-git branch -M main
+---
 
-# 3. Stage and commit all changes
-git add -A
-git commit -m "feat: complete INS grades system with Vercel frontend and Railway backend"
+## 3. 🤖 (Optional) Standalone Bot Worker on Railway
 
-# 4. Push to your repository
-git push -u origin main
+If you want the bot running in an isolated worker process instead of inside the backend:
+1. In the same Railway project, click **"+ New"** -> **"GitHub Repo"**.
+2. Select `asliddintursunoff/INS-Grades`.
+3. Set **Root Directory** to `bot`.
+4. Add environment variables:
+   - `TELEGRAM_BOT_TOKEN`: `7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A`
+   - `API_URL`: Your deployed backend URL from step 2
+   - `APP_URL`: Your Vercel URL
+   - `INTERNAL_KEY`: `ins_secret_internal_key_2025`
+5. Railway will launch `python main.py` using the included Procfile.
+
+---
+
+## 4. 🔑 Summary of Environment Variables
+
+### Frontend (`frontend/.env`)
+```env
+VITE_API_URL=https://your-backend-name.up.railway.app
 ```
 
----
+### Backend (`backend/.env`)
+```env
+PORT=3000
+TELEGRAM_BOT_TOKEN=7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A
+APP_URL=https://ins-grades.vercel.app
+INTERNAL_KEY=ins_secret_internal_key_2025
+DATABASE_PATH=data/timetable.db
+```
 
-## Part 2: Deploy Backend to Railway
-
-1. Go to [railway.com](https://railway.com) and click **New Project** ➔ **Deploy from GitHub repo**.
-2. Select your repository.
-3. In Railway, click on your service and go to **Settings**:
-   - **Root Directory**: Set to `backend`
-4. Under **Variables**, add these environment variables:
-
-| Variable | Value Example | Notes |
-|---|---|---|
-| `PORT` | `3000` | Railway automatically assigns a port |
-| `TELEGRAM_BOT_TOKEN` | `8234622386:AAGRh0DIzbn4BrG-gGBWiuTzMHu6l0chciE` | From @BotFather |
-| `APP_URL` | `https://your-frontend.vercel.app` | Your Vercel frontend URL (set after Part 3) |
-| `INTERNAL_API_KEY` | `uni-system-internal-secret-key-2026` | Keep secret |
-| `DATABASE_URL` | *(Optional)* | Link a PostgreSQL database plugin in Railway or leave empty for embedded SQLite |
-
-5. Under **Settings ➔ Networking**, click **Generate Domain**.
-   - Copy this domain (e.g., `https://ins-grades-backend.up.railway.app`).
-
----
-
-## Part 3: Deploy Frontend to Vercel
-
-1. Go to [vercel.com](https://vercel.com) and click **Add New Project** ➔ **Import Git Repository**.
-2. Select your repository.
-3. In project configuration:
-   - **Framework Preset**: `Vite`
-   - **Root Directory**: Click *Edit* and select `frontend`
-4. Under **Environment Variables**, add:
-
-| Variable | Value Example | Notes |
-|---|---|---|
-| `VITE_API_URL` | `https://ins-grades-backend.up.railway.app` | Your public Railway backend URL (no trailing slash) |
-| `VITE_BOT_USERNAME` | `INS_gradesbot` | Your Telegram bot handle |
-
-5. Click **Deploy**. Vercel will build and give you a live production URL (e.g., `https://ins-grades.vercel.app`).
-
----
-
-## Part 4: Connect Telegram Bot with your Vercel WebApp
-
-Now connect your live Vercel URL to the Telegram Bot:
-
-1. In Railway:
-   - Update `APP_URL` in Railway Variables to: `https://ins-grades.vercel.app` (your actual Vercel URL).
-2. In Telegram [@BotFather](https://t.me/botfather):
-   - Send `/mybots`
-   - Choose `@INS_gradesbot`
-   - Click **Bot Settings** ➔ **Menu Button** ➔ **Configure menu button**
-   - Enter your Vercel URL: `https://ins-grades.vercel.app`
-   - Enter button title: `Open INS Grades`
-3. In BotFather, also set the WebApp domain:
-   - `/setmenubutton` ➔ select bot ➔ set URL.
+### Bot Worker (`bot/.env`)
+```env
+TELEGRAM_BOT_TOKEN=7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A
+API_URL=https://your-backend-name.up.railway.app
+APP_URL=https://ins-grades.vercel.app
+INTERNAL_KEY=ins_secret_internal_key_2025
+```

@@ -1,16 +1,26 @@
-# INS Grades - Dedicated Telegram Bot Worker (Railway)
+# INS Grades - Python Telegram Bot Worker
 
-This folder contains a standalone worker service for **INS_gradesbot** if you prefer running the Telegram Bot in its own dedicated Railway worker container rather than bundled inside `backend/`.
+Standalone Python Telegram Bot worker for INS Grades.
+Configured by `@asliddin_tursunoff`.
 
-> **Note:** The `backend/` service already includes this bot automatically by default. You only need this `bot/` folder if you want to scale or deploy the bot independently as a background worker!
+## 📌 Description
+This worker handles Telegram Bot commands and delivers upcoming class notifications by interacting with the FastAPI backend REST API.
 
-## 🚀 Deployment on Railway as a Background Worker
+## 🛠 Local Run
+```bash
+cd bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python main.py
+```
 
-1. In your Railway project, click **"New"** -> **"GitHub Repo"** (or add a new service from the existing repo).
-2. Set **Root Directory** in Service Settings to: `bot`
-3. Under **Variables**, add:
-   - `TELEGRAM_BOT_TOKEN`: `8234622386:AAGRh0DIzbn4BrG-gGBWiuTzMHu6l0chciE`
-   - `BACKEND_API_URL`: Your Railway backend domain (e.g. `https://ins-grades-backend.up.railway.app`)
-   - `INTERNAL_API_KEY`: `uni-system-internal-secret-key-2026`
-   - `APP_URL`: Your Vercel frontend URL (e.g. `https://ins-grades.vercel.app`)
-4. Railway will build and run the worker continuously with automatic restart on failure.
+## 🌐 Deploy to Railway
+1. Create a new service in your Railway project.
+2. Connect to GitHub repo and set **Root Directory** to `bot`.
+3. Set environment variables:
+   - `TELEGRAM_BOT_TOKEN`: Your Telegram Bot Token
+   - `API_URL`: URL of your deployed `backend` service
+   - `APP_URL`: Your Vercel frontend URL
+   - `INTERNAL_KEY`: Secret internal communication key
+4. Railway will automatically build via Nixpacks/Dockerfile and start `python main.py`.
