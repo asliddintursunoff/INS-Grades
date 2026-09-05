@@ -161,6 +161,10 @@ CORS_ALLOW_HEADERS = [
     'x-telegram-init-data',
 ]
 
+# CSRF Trusted Origins
+csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://*.up.railway.app,https://*.vercel.app,http://localhost:3000,http://localhost:5173')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_trusted.split(',') if origin.strip()]
+
 # Custom API Security
 API_KEY = os.getenv('API_KEY', 'ins_secure_api_key_2026_x89a')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
