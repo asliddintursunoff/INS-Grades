@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 3000
 
 # Run migrations and start Gunicorn
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-3000} --workers 2 --threads 4"]
+CMD ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py migrate --noinput && exec gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-3000} --workers 2 --threads 4"]
