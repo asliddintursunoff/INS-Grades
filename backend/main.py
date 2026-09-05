@@ -369,22 +369,65 @@ def create_client_session(request: Request):
 @app.get("/api/system/status", dependencies=[Depends(require_api_auth)])
 @app.get("/api/system/status/", dependencies=[Depends(require_api_auth)])
 def system_status():
-    student_res = query("SELECT COUNT(*) as c FROM students;")
-    student_count = student_res[0]["c"] if student_res else 0
+    db_status = get_connection_status()
+    is_active = db_status["connected"]
+    student_count = 0
+    class_count = 0
 
-    class_res = query("SELECT COUNT(*) as c FROM classes;")
-    class_count = class_res[0]["c"] if class_res else 0
+    if is_active:
+        try:
+            student_res = query("SELECT COUNT(*) as c FROM students;")
+            student_count = student_res[0]["c"] if student_res else 0
+            class_res = query("SELECT COUNT(*) as c FROM classes;")
+            class_count = class_res[0]["c"] if class_res else 0
+        except Exception:
+            pass
 
     return {
-        "status": "ok",
+        "status": "ok" if is_active else "database_connection_error",
         "database": "Railway PostgreSQL",
-        "postgres_connected": is_postgres_active(),
+        "postgres_connected": is_active,
+        "database_connected": is_active,
+        "database_error": db_status.get("error"),
         "framework": "FastAPI (Python)",
         "bot_active": True,
         "bot_username": "INS_gradesbot",
         "student_count": student_count,
         "class_count": class_count,
     }
+
+@app.get("/api/demo/students", dependencies=[Depends(require_api_auth)])
+@app.get("/api/demo/students/", dependencies=[Depends(require_api_auth)])
+def get_demo_students():
+    db_status = get_connection_status()
+    if not db_status["connected"]:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Database connection error",
+                "message": db_status.get("error") or "Railway PostgreSQL is not connected.",
+                "database_connected": False,
+                "students": [],
+            }
+        )
+    try:
+        students = query(
+            """SELECT s.student_id, s.full_name, s.telegram_id, s.telegram_username, g.group_name
+               FROM students s
+               JOIN groups g ON s.group_id = g.group_id
+               ORDER BY s.student_id"""
+        )
+        return {"students": students, "database_connected": True}
+    except DatabaseConnectionError as dbe:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Database connection error",
+                "message": str(dbe),
+                "database_connected": False,
+                "students": [],
+            }
+        )
 
 @app.get("/api/auth/me/{telegram_id}", dependencies=[Depends(require_api_auth)])
 @app.get("/api/auth/me/{telegram_id}/", dependencies=[Depends(require_api_auth)])

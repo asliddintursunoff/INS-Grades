@@ -4,7 +4,7 @@ This repository is split into three clean services for effortless deployment:
 
 ```
 ├── frontend/      # React + Vite + Tailwind (Deploy to Vercel)
-├── backend/       # Python + FastAPI + SQLite (Deploy to Railway)
+├── backend/       # Python + FastAPI + Railway PostgreSQL (Deploy to Railway)
 └── bot/           # Python Standalone Telegram Bot worker (Optional Railway worker)
 ```
 
@@ -37,14 +37,17 @@ This repository is split into three clean services for effortless deployment:
    - Railway will inject `DATABASE_URL` into your backend automatically.
 5. In **Variables**, also add:
    - `PORT`: `3000` (or leave default `$PORT`)
-   - `TELEGRAM_BOT_TOKEN`: `7963381665:AAFljS3q8j5GvFp-7u2vK5Dq5f5mBqW9X5A`
+   - `DATABASE_URL`: Linked from Railway PostgreSQL (Strict: Never falls back to mock or other databases)
+   - `API_KEY`: Secret master API key for protected endpoints (e.g. `ins_secure_api_key_2026_x89a`)
+   - `TELEGRAM_BOT_TOKEN`: Your bot token from @BotFather
    - `APP_URL`: Your Vercel frontend URL (e.g. `https://ins-grades.vercel.app`)
-   - `INTERNAL_KEY`: `ins_secret_internal_key_2025`
+   - `ALLOWED_ORIGINS`: Comma-separated allowed frontend origins (e.g. `https://ins-grades.vercel.app`)
+   - `RATE_LIMIT_PER_MINUTE`: 60
 6. Railway will automatically build and start the server with:
    ```bash
    uvicorn main:app --host 0.0.0.0 --port $PORT
    ```
-   On startup, the backend connects to your Railway PostgreSQL database, initializes all tables, and auto-seeds the full university schedule and professor directory!
+   On startup, the backend connects strictly to your live Railway PostgreSQL database and verifies table schemas without modifying or overwriting your user records. If PostgreSQL cannot be reached, the server fails fast and reports a 503 connection error.
 7. In Railway **Settings** -> **Networking**, click **"Generate Domain"** to get your public backend URL.
 
 ---

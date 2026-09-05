@@ -89,7 +89,7 @@ export class DatabaseManager {
   }
 
   public query(sql: string, params: any[] = []): { rows: any[] } {
-    if (!this.isConnected && !this.pgPool) {
+    if (!this.isConnected || !this.pgPool) {
       throw new Error(
         this.lastError ||
         'Database connection error: Railway PostgreSQL is not connected. Please verify DATABASE_URL.'
@@ -109,8 +109,21 @@ export class DatabaseManager {
     return { rows };
   }
 
+  public async queryAsync(sql: string, params: any[] = []): Promise<any[]> {
+    if (!this.isConnected || !this.pgPool) {
+      throw new Error(
+        this.lastError ||
+        'Database connection error: Railway PostgreSQL is not connected. Please verify DATABASE_URL.'
+      );
+    }
+    let idx = 1;
+    const pgSql = sql.replace(/\?/g, () => `$${idx++}`);
+    const res = await this.pgPool.query(pgSql, params);
+    return res.rows || [];
+  }
+
   public execute(sql: string, params: any[] = []): { changes: number; lastInsertRowid?: number } {
-    if (!this.isConnected && !this.pgPool) {
+    if (!this.isConnected || !this.pgPool) {
       throw new Error(
         this.lastError ||
         'Database connection error: Railway PostgreSQL is not connected. Please verify DATABASE_URL.'
@@ -128,6 +141,19 @@ export class DatabaseManager {
     }
 
     return { changes: 1 };
+  }
+
+  public async executeAsync(sql: string, params: any[] = []): Promise<number> {
+    if (!this.isConnected || !this.pgPool) {
+      throw new Error(
+        this.lastError ||
+        'Database connection error: Railway PostgreSQL is not connected. Please verify DATABASE_URL.'
+      );
+    }
+    let idx = 1;
+    const pgSql = sql.replace(/\?/g, () => `$${idx++}`);
+    const res = await this.pgPool.query(pgSql, params);
+    return res.rowCount || 0;
   }
 
   private queryCached(sql: string, params: any[] = []): any[] {
