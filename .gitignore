@@ -4,11 +4,26 @@ dist/
 coverage/
 .DS_Store
 *.log
+*.sqlite3
 *.db-shm
 *.db-wal
-.env*
-!.env.example
+.env
+.env.local
+.env.production
 __pycache__/
 *.py[cod]
 *$py.class
 
+# Root runtime files (dev container only, not part of production multi-service repo)
+/server.ts
+/server/
+/src/
+/public/
+/DEPLOYMENT.md
+/bun.lock
+/package.json
+/package-lock.json
+/tsconfig.json
+/vite.config.ts
+/index.html
+/metadata.json
