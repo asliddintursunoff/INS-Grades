@@ -26,35 +26,97 @@ export class DatabaseManager {
   }
 
   public async initPostgres() {
-    const dbUrl = process.env.DATABASE_URL;
+    const dbUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
+    const pghost = process.env.PGHOST;
+    const pguser = process.env.PGUSER || 'postgres';
+    const pgpass = process.env.PGPASSWORD;
+    const pgport = parseInt(process.env.PGPORT || '5432', 10);
+    const pgdb = process.env.PGDATABASE || 'railway';
 
-    if (!dbUrl) {
+    if (!dbUrl && (!pghost || !pgpass)) {
       this.isConnected = false;
       this.lastError = 'Database connection error: DATABASE_URL environment variable is missing. Please configure DATABASE_URL.';
       console.warn('[DB] ' + this.lastError);
       return;
     }
 
-    try {
-      const pool = new Pool({
-        connectionString: dbUrl,
-        ssl: dbUrl.includes('railway.net') ? { rejectUnauthorized: false } : undefined,
-        connectionTimeoutMillis: 4000,
-      });
+    const candidatePools: { desc: string; pool: Pool }[] = [];
 
-      const res = await pool.query('SELECT 1');
-      if (res) {
-        this.pgPool = pool;
-        this.isConnected = true;
-        this.lastError = null;
-        console.log('[DB] Connected to Railway PostgreSQL database successfully.');
-        await this.syncCacheFromPostgres();
-      }
-    } catch (err: any) {
-      this.isConnected = false;
-      this.lastError = `Database connection error: Could not connect to Railway PostgreSQL database. Detail: ${err.message || err}`;
-      console.error('[DB] ' + this.lastError);
+    // Candidate 1: Explicit PG* variables if provided
+    if (pghost && pgpass) {
+      candidatePools.push({
+        desc: `Railway PG* env vars (${pghost}:${pgport})`,
+        pool: new Pool({
+          host: pghost,
+          port: pgport,
+          user: pguser,
+          password: pgpass,
+          database: pgdb,
+          ssl: pghost.includes('railway.internal') ? false : { rejectUnauthorized: false },
+          connectionTimeoutMillis: 4000,
+        }),
+      });
     }
+
+    // Candidate 2: Parsed DATABASE_URL with decodeURIComponent
+    if (dbUrl) {
+      try {
+        const parsed = new URL(dbUrl.startsWith('postgres://') ? dbUrl.replace('postgres://', 'postgresql://') : dbUrl);
+        const host = parsed.hostname;
+        const port = parseInt(parsed.port || '5432', 10);
+        const user = decodeURIComponent(parsed.username || 'postgres');
+        const pass = decodeURIComponent(parsed.password || '');
+        const dbname = parsed.pathname.replace(/^\//, '') || 'railway';
+        const isInternal = host.includes('railway.internal') || host.includes('localhost');
+
+        candidatePools.push({
+          desc: `Parsed DATABASE_URL (host=${host}:${port}, user=${user})`,
+          pool: new Pool({
+            host,
+            port,
+            user,
+            password: pass,
+            database: dbname,
+            ssl: isInternal ? false : { rejectUnauthorized: false },
+            connectionTimeoutMillis: 4000,
+          }),
+        });
+      } catch (pe) {
+        // Ignore URL parse error
+      }
+
+      // Candidate 3: Raw connectionString
+      candidatePools.push({
+        desc: 'Direct connectionString',
+        pool: new Pool({
+          connectionString: dbUrl,
+          ssl: dbUrl.includes('railway.net') ? { rejectUnauthorized: false } : undefined,
+          connectionTimeoutMillis: 4000,
+        }),
+      });
+    }
+
+    let lastErr: any = null;
+    for (const cand of candidatePools) {
+      try {
+        const res = await cand.pool.query('SELECT 1');
+        if (res) {
+          this.pgPool = cand.pool;
+          this.isConnected = true;
+          this.lastError = null;
+          console.log(`[DB] Connected to Railway PostgreSQL successfully via ${cand.desc}.`);
+          await this.syncCacheFromPostgres();
+          return;
+        }
+      } catch (err: any) {
+        lastErr = err;
+        await cand.pool.end().catch(() => {});
+      }
+    }
+
+    this.isConnected = false;
+    this.lastError = `Database connection error: Could not connect to Railway PostgreSQL database across ${candidatePools.length} methods. Detail: ${lastErr?.message || lastErr}`;
+    console.error('[DB] ' + this.lastError);
   }
 
   public async syncCacheFromPostgres() {

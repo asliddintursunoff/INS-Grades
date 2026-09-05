@@ -4,7 +4,7 @@ import logging
 import httpx
 from datetime import datetime
 from typing import Optional, Dict, Any
-from database import query, execute
+from database import query, execute, is_postgres_active
 from services.timetable_service import get_effective_schedule, DAY_NAMES
 from services.enrollment_service import get_student_classes
 from services.attendance_service import get_student_absences
@@ -287,6 +287,13 @@ class TelegramBot:
                             await self.handle_start(chat_id, user)
                         elif text:
                             await self.handle_text(chat_id, user, text)
+                elif res.get("error_code") == 409:
+                    logger.warning("[TelegramBot] 409 Conflict: another bot instance is polling getUpdates. Backing off for 15s...")
+                    await asyncio.sleep(15)
+                    continue
+                else:
+                    err_desc = res.get("description", "Unknown Telegram API response")
+                    logger.debug(f"[TelegramBot] getUpdates response: {err_desc}")
             except Exception as e:
                 logger.error(f"[TelegramBot] Error in polling loop: {e}")
                 await asyncio.sleep(3)
@@ -297,21 +304,22 @@ class TelegramBot:
         """Scheduler task to notify students before class starts."""
         while self.is_running:
             try:
-                upcoming = get_upcoming_sessions_for_scheduler()
-                for item in upcoming:
-                    tg_id = item["telegram_id"]
-                    msg = (
-                        f"⏰ <b>Lesson Reminder!</b>\n\n"
-                        f"📖 <b>{item['subject_full']}</b> ({item['subject_short']})\n"
-                        f"🕒 Starts at: <b>{item['start_time']}</b> (in {item['minutes_left']} mins)\n"
-                        f"🚪 Room: <b>{item['room']}</b>\n"
-                        f"👨‍🏫 Professor: {item['professor']}\n\n"
-                        f"Have a productive lecture!"
-                    )
-                    await self.send_message(tg_id, msg)
-                    mark_notification_sent(tg_id, item["session_id"])
+                if is_postgres_active():
+                    upcoming = get_upcoming_sessions_for_scheduler()
+                    for item in upcoming:
+                        tg_id = item["telegram_id"]
+                        msg = (
+                            f"⏰ <b>Lesson Reminder!</b>\n\n"
+                            f"📖 <b>{item['subject_full']}</b> ({item['subject_short']})\n"
+                            f"🕒 Starts at: <b>{item['start_time']}</b> (in {item['minutes_left']} mins)\n"
+                            f"🚪 Room: <b>{item['room']}</b>\n"
+                            f"👨‍🏫 Professor: {item['professor']}\n\n"
+                            f"Have a productive lecture!"
+                        )
+                        await self.send_message(tg_id, msg)
+                        mark_notification_sent(tg_id, item["session_id"])
             except Exception as e:
-                logger.error(f"[TelegramBot] Reminder check error: {e}")
+                logger.warning(f"[TelegramBot] Reminder check skipped: {e}")
 
             await asyncio.sleep(30)
 

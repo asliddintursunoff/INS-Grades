@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import urllib.parse
 from typing import Any, List, Dict, Optional
 
 try:
@@ -16,39 +17,163 @@ class DatabaseConnectionError(Exception):
     """Raised when Railway PostgreSQL cannot be reached or credentials are missing."""
     pass
 
-# Railway PostgreSQL environment variables
-DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("DATABASE_PUBLIC_URL")
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-PGHOST = os.getenv("PGHOST")
-PGPORT = os.getenv("PGPORT", "5432")
-PGUSER = os.getenv("PGUSER")
-PGPASSWORD = os.getenv("PGPASSWORD")
-PGDATABASE = os.getenv("PGDATABASE")
-
-# Check if PostgreSQL credentials are configured
-HAS_POSTGRES_CONFIG = bool(DATABASE_URL or (PGHOST and PGUSER and PGDATABASE))
-
 # Store the last connection error message for diagnostics
 LAST_CONNECTION_ERROR: Optional[str] = None
+
+
+def _mask_secret(s: Optional[str]) -> str:
+    """Safely mask secrets for logging diagnostics."""
+    if not s:
+        return "<none>"
+    if len(s) <= 4:
+        return "***"
+    return f"{s[:2]}...{s[-2:]} (len {len(s)})"
+
+
+def _get_connection_candidates() -> List[Dict[str, Any]]:
+    """
+    Build connection candidates dynamically in priority order.
+    Resolves:
+    - Special characters and URL-encoding in passwords (e.g. %40, @, #, etc.)
+    - Direct PG* environment variables automatically set by Railway
+    - Internal Railway private networking (postgres.railway.internal:5432) which requires no SSL
+    - External Railway proxies (*.proxy.rlwy.net) which require SSL
+    """
+    candidates = []
+
+    db_url = os.getenv("DATABASE_URL")
+    pub_url = os.getenv("DATABASE_PUBLIC_URL")
+    pghost = os.getenv("PGHOST")
+    pgport = os.getenv("PGPORT", "5432")
+    pguser = os.getenv("PGUSER", "postgres")
+    pgpass = os.getenv("PGPASSWORD")
+    pgdb = os.getenv("PGDATABASE", "railway")
+
+    # Strategy 1: Explicit PG* variables (injected directly by Railway Postgres plugin)
+    if pghost and pgpass:
+        is_internal = "railway.internal" in pghost or "localhost" in pghost
+        # On Railway internal IPv6 network, SSL is not enabled
+        sslmode_first = "disable" if is_internal else "require"
+        candidates.append({
+            "desc": f"Railway env vars (host={pghost}, user={pguser}, db={pgdb}, ssl={sslmode_first})",
+            "kwargs": {
+                "host": pghost,
+                "port": int(pgport),
+                "user": pguser,
+                "password": pgpass,
+                "dbname": pgdb,
+                "sslmode": sslmode_first,
+                "connect_timeout": 5,
+            }
+        })
+        candidates.append({
+            "desc": f"Railway env vars (host={pghost}, user={pguser}, db={pgdb}, ssl=prefer)",
+            "kwargs": {
+                "host": pghost,
+                "port": int(pgport),
+                "user": pguser,
+                "password": pgpass,
+                "dbname": pgdb,
+                "sslmode": "prefer",
+                "connect_timeout": 5,
+            }
+        })
+
+    # Strategy 2: Parse DATABASE_URL and DATABASE_PUBLIC_URL
+    urls_to_try = []
+    if db_url:
+        urls_to_try.append(("DATABASE_URL", db_url))
+    if pub_url and pub_url != db_url:
+        urls_to_try.append(("DATABASE_PUBLIC_URL", pub_url))
+
+    for url_label, raw_url in urls_to_try:
+        norm_url = raw_url.strip()
+        if norm_url.startswith("postgres://"):
+            norm_url = norm_url.replace("postgres://", "postgresql://", 1)
+
+        try:
+            parsed = urllib.parse.urlparse(norm_url)
+            user = urllib.parse.unquote(parsed.username or "postgres")
+            raw_password = parsed.password or ""
+            unquoted_password = urllib.parse.unquote(raw_password)
+            host = parsed.hostname or "localhost"
+            port = parsed.port or 5432
+            dbname = parsed.path.lstrip("/") if parsed.path else "railway"
+            is_internal = "railway.internal" in host or "localhost" in host
+
+            # Use keyword args with unquoted password
+            # For internal Railway connections, disable or prefer SSL
+            sslmode = "disable" if is_internal else "require"
+
+            candidates.append({
+                "desc": f"{url_label} parsed with unquoted password (host={host}:{port}, user={user}, pass={_mask_secret(unquoted_password)}, ssl={sslmode})",
+                "kwargs": {
+                    "host": host,
+                    "port": port,
+                    "user": user,
+                    "password": unquoted_password,
+                    "dbname": dbname,
+                    "sslmode": sslmode,
+                    "connect_timeout": 5,
+                }
+            })
+
+            # Also try with sslmode=prefer
+            candidates.append({
+                "desc": f"{url_label} parsed (host={host}:{port}, user={user}, ssl=prefer)",
+                "kwargs": {
+                    "host": host,
+                    "port": port,
+                    "user": user,
+                    "password": unquoted_password,
+                    "dbname": dbname,
+                    "sslmode": "prefer",
+                    "connect_timeout": 5,
+                }
+            })
+
+            # If unquoted differs from raw password, try raw password
+            if unquoted_password != raw_password:
+                candidates.append({
+                    "desc": f"{url_label} parsed with raw password (host={host}:{port}, user={user})",
+                    "kwargs": {
+                        "host": host,
+                        "port": port,
+                        "user": user,
+                        "password": raw_password,
+                        "dbname": dbname,
+                        "sslmode": sslmode,
+                        "connect_timeout": 5,
+                    }
+                })
+
+            # Fallback to direct DSN string
+            candidates.append({
+                "desc": f"{url_label} direct DSN string (sslmode={'disable' if is_internal else 'prefer'})",
+                "dsn": norm_url,
+                "kwargs": {
+                    "sslmode": "disable" if is_internal else "prefer",
+                    "connect_timeout": 5,
+                }
+            })
+        except Exception as pe:
+            logger.warning(f"[DB] Error parsing {url_label}: {pe}")
+            candidates.append({
+                "desc": f"{url_label} raw DSN fallback",
+                "dsn": norm_url,
+                "kwargs": {"connect_timeout": 5}
+            })
+
+    return candidates
 
 
 def get_pg_connection():
     """
     Obtain an active connection to Railway PostgreSQL.
-    STRICT: Never falls back to any other database.
+    STRICT: Never falls back to SQLite or mock data.
     Raises DatabaseConnectionError if connection fails.
     """
     global LAST_CONNECTION_ERROR
-
-    if not HAS_POSTGRES_CONFIG:
-        err_msg = (
-            "Database connection error: DATABASE_URL environment variable is missing. "
-            "Please configure DATABASE_URL in your Railway backend service variables."
-        )
-        LAST_CONNECTION_ERROR = err_msg
-        raise DatabaseConnectionError(err_msg)
 
     try:
         import psycopg2
@@ -58,39 +183,51 @@ def get_pg_connection():
         LAST_CONNECTION_ERROR = err_msg
         raise DatabaseConnectionError(err_msg)
 
-    try:
-        if DATABASE_URL:
-            # Connect using Railway PostgreSQL URL
-            conn = psycopg2.connect(
-                DATABASE_URL,
-                cursor_factory=RealDictCursor,
-                connect_timeout=5,
-                sslmode="require" if "railway" in DATABASE_URL else "prefer"
-            )
-        else:
-            conn = psycopg2.connect(
-                host=PGHOST,
-                port=int(PGPORT),
-                user=PGUSER,
-                password=PGPASSWORD,
-                dbname=PGDATABASE,
-                cursor_factory=RealDictCursor,
-                connect_timeout=5
-            )
-        conn.autocommit = True
-        LAST_CONNECTION_ERROR = None
-        return conn
-    except Exception as e:
-        err_msg = f"Database connection error: Failed to connect to Railway PostgreSQL database. Detail: {str(e)}"
+    candidates = _get_connection_candidates()
+    if not candidates:
+        err_msg = (
+            "Database connection error: Neither DATABASE_URL nor PGHOST/PGPASSWORD environment variables are set. "
+            "Please configure DATABASE_URL in your Railway backend service variables."
+        )
         LAST_CONNECTION_ERROR = err_msg
-        logger.error(f"[DB] {err_msg}")
         raise DatabaseConnectionError(err_msg)
+
+    attempt_errors = []
+    for cand in candidates:
+        try:
+            if "dsn" in cand:
+                conn = psycopg2.connect(
+                    cand["dsn"],
+                    cursor_factory=RealDictCursor,
+                    **cand.get("kwargs", {})
+                )
+            else:
+                conn = psycopg2.connect(
+                    cursor_factory=RealDictCursor,
+                    **cand["kwargs"]
+                )
+            conn.autocommit = True
+            LAST_CONNECTION_ERROR = None
+            logger.info(f"[DB] Connected successfully via {cand['desc']}")
+            return conn
+        except Exception as e:
+            err_str = str(e).strip()
+            attempt_errors.append(f"{cand['desc']} -> {err_str}")
+            logger.debug(f"[DB] Candidate failed: {cand['desc']} - {err_str}")
+
+    # All candidates failed
+    last_err = attempt_errors[-1] if attempt_errors else "Unknown connection error"
+    err_msg = (
+        f"Database connection error: Failed to connect to Railway PostgreSQL database across {len(candidates)} connection methods. "
+        f"Detail: {last_err}"
+    )
+    LAST_CONNECTION_ERROR = err_msg
+    logger.error(f"[DB] {err_msg}")
+    raise DatabaseConnectionError(err_msg)
 
 
 def is_postgres_active() -> bool:
     """Check if Railway PostgreSQL is actively responding to queries."""
-    if not HAS_POSTGRES_CONFIG:
-        return False
     try:
         conn = get_pg_connection()
         with conn.cursor() as cur:
@@ -104,10 +241,12 @@ def is_postgres_active() -> bool:
 def get_connection_status() -> Dict[str, Any]:
     """Return explicit connection status for diagnostics."""
     active = is_postgres_active()
+    candidates = _get_connection_candidates()
     return {
         "connected": active,
         "database": "Railway PostgreSQL",
-        "configured": HAS_POSTGRES_CONFIG,
+        "configured": len(candidates) > 0,
+        "candidates_available": len(candidates),
         "error": LAST_CONNECTION_ERROR if not active else None
     }
 
@@ -165,7 +304,8 @@ def init_db():
     NEVER overwrites, modifies, or seeds dummy records into existing user data.
     """
     global LAST_CONNECTION_ERROR
-    if not HAS_POSTGRES_CONFIG:
+    candidates = _get_connection_candidates()
+    if not candidates:
         err_msg = (
             "Database connection error: DATABASE_URL is not configured. "
             "Please link your Railway PostgreSQL database."
