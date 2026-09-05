@@ -20,6 +20,13 @@ class DatabaseConnectionError(Exception):
 # Store the last connection error message for diagnostics
 LAST_CONNECTION_ERROR: Optional[str] = None
 
+# Backward compatibility flag
+HAS_POSTGRES_CONFIG: bool = bool(
+    os.getenv("DATABASE_URL")
+    or os.getenv("DATABASE_PUBLIC_URL")
+    or (os.getenv("PGHOST") and (os.getenv("PGPASSWORD") or os.getenv("PGUSER")))
+)
+
 
 def _mask_secret(s: Optional[str]) -> str:
     """Safely mask secrets for logging diagnostics."""

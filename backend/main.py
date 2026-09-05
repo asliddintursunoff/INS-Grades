@@ -26,7 +26,6 @@ from database import (
     is_postgres_active,
     get_connection_status,
     DatabaseConnectionError,
-    HAS_POSTGRES_CONFIG,
 )
 from services.timetable_service import (
     get_effective_schedule,
