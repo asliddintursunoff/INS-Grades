@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="insGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="50%" stop-color="#1D4ED8"/>
+      <stop offset="100%" stop-color="#4338CA"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#818CF8"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded Shield / Squircle Background -->
+  <rect x="6" y="6" width="108" height="108" rx="28" fill="url(#insGrad)" stroke="#60A5FA" stroke-width="2" stroke-opacity="0.3"/>
+  
+  <!-- Subtle Grid Accent -->
+  <circle cx="60" cy="60" r="42" stroke="#93C5FD" stroke-width="1" stroke-dasharray="3 3" opacity="0.4"/>
+  
+  <!-- Cap / Academic Crest Top -->
+  <path d="M60 26L86 38L60 50L34 38L60 26Z" fill="url(#accentGrad)"/>
+  <path d="M46 44V56C46 62 60 67 60 67C60 67 74 62 74 56V44" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M84 41V58" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="84" cy="60" r="2" fill="#38BDF8"/>
+
+  <!-- Bold INS Monogram -->
+  <text x="60" y="94" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="24" letter-spacing="1.5">INS</text>
+  
+  <!-- Little Star/Dot -->
+  <circle cx="60" cy="103" r="2.5" fill="#38BDF8"/>
+</svg>

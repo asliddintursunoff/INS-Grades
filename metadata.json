@@ -1,0 +1,6 @@
+{
+  "name": "INS grades",
+  "description": "INS grades student timetable, one-time upcoming class slot switching, course retakes, and Telegram bot. Powered by asliddin_tursunoff",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
