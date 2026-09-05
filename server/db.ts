@@ -26,36 +26,51 @@ export class DatabaseManager {
   }
 
   public async initPostgres() {
-    const dbUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
-    const pghost = process.env.PGHOST;
-    const pguser = process.env.PGUSER || 'postgres';
-    const pgpass = process.env.PGPASSWORD;
-    const pgport = parseInt(process.env.PGPORT || '5432', 10);
-    const pgdb = process.env.PGDATABASE || 'railway';
+    const dbHost = (process.env.DB_HOST || process.env.PGHOST || process.env.POSTGRES_HOST || '').trim();
+    const dbPort = parseInt((process.env.DB_PORT || process.env.PGPORT || process.env.POSTGRES_PORT || '5432').trim(), 10) || 5432;
+    const dbUser = (process.env.DB_USER || process.env.PGUSER || process.env.POSTGRES_USER || 'postgres').trim();
+    const dbPass = (process.env.DB_PASSWORD || process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD || '').trim();
+    const dbName = (process.env.DB_NAME || process.env.PGDATABASE || process.env.POSTGRES_DB || 'railway').trim();
+    const dbSslmode = (process.env.DB_SSLMODE || '').trim().toLowerCase();
 
-    if (!dbUrl && (!pghost || !pgpass)) {
+    const dbUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
+
+    if (!dbUrl && (!dbHost || !dbPass)) {
       this.isConnected = false;
-      this.lastError = 'Database connection error: DATABASE_URL environment variable is missing. Please configure DATABASE_URL.';
+      this.lastError = 'Database connection error: DB_HOST/DB_PASSWORD or DATABASE_URL environment variables are missing.';
       console.warn('[DB] ' + this.lastError);
       return;
     }
 
     const candidatePools: { desc: string; pool: Pool }[] = [];
 
-    // Candidate 1: Explicit PG* variables if provided
-    if (pghost && pgpass) {
-      candidatePools.push({
-        desc: `Railway PG* env vars (${pghost}:${pgport})`,
-        pool: new Pool({
-          host: pghost,
-          port: pgport,
-          user: pguser,
-          password: pgpass,
-          database: pgdb,
-          ssl: pghost.includes('railway.internal') ? false : { rejectUnauthorized: false },
-          connectionTimeoutMillis: 4000,
-        }),
-      });
+    // Candidate 1: Explicit individual environment variables (Top Priority)
+    if (dbHost && dbPass) {
+      const isInternal = dbHost.includes('railway.internal') || dbHost.includes('localhost');
+      const isProxy = dbHost.includes('proxy.rlwy.net');
+
+      const sslOptions = dbSslmode === 'disable'
+        ? [false]
+        : dbSslmode === 'require'
+        ? [{ rejectUnauthorized: false }]
+        : isProxy
+        ? [{ rejectUnauthorized: false }, false]
+        : [false, { rejectUnauthorized: false }];
+
+      for (const ssl of sslOptions) {
+        candidatePools.push({
+          desc: `Manual env vars (host=${dbHost}:${dbPort}, user=${dbUser}, ssl=${ssl ? 'require' : 'disable'})`,
+          pool: new Pool({
+            host: dbHost,
+            port: dbPort,
+            user: dbUser,
+            password: dbPass,
+            database: dbName,
+            ssl,
+            connectionTimeoutMillis: 4000,
+          }),
+        });
+      }
     }
 
     // Candidate 2: Parsed DATABASE_URL with decodeURIComponent

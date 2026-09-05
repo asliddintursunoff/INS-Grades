@@ -24,7 +24,10 @@ LAST_CONNECTION_ERROR: Optional[str] = None
 HAS_POSTGRES_CONFIG: bool = bool(
     os.getenv("DATABASE_URL")
     or os.getenv("DATABASE_PUBLIC_URL")
-    or (os.getenv("PGHOST") and (os.getenv("PGPASSWORD") or os.getenv("PGUSER")))
+    or os.getenv("DB_HOST")
+    or os.getenv("PGHOST")
+    or os.getenv("DB_PASSWORD")
+    or os.getenv("PGPASSWORD")
 )
 
 
@@ -40,54 +43,57 @@ def _mask_secret(s: Optional[str]) -> str:
 def _get_connection_candidates() -> List[Dict[str, Any]]:
     """
     Build connection candidates dynamically in priority order.
-    Resolves:
-    - Special characters and URL-encoding in passwords (e.g. %40, @, #, etc.)
-    - Direct PG* environment variables automatically set by Railway
-    - Internal Railway private networking (postgres.railway.internal:5432) which requires no SSL
-    - External Railway proxies (*.proxy.rlwy.net) which require SSL
+    Top Priority: Explicit individual environment variables entered by hand:
+      - DB_HOST (or PGHOST, POSTGRES_HOST)
+      - DB_PORT (or PGPORT, POSTGRES_PORT)
+      - DB_USER (or PGUSER, POSTGRES_USER)
+      - DB_PASSWORD (or PGPASSWORD, POSTGRES_PASSWORD)
+      - DB_NAME (or PGDATABASE, POSTGRES_DB)
+      - DB_SSLMODE (optional: disable, require, prefer)
+    Fallback: DATABASE_URL and DATABASE_PUBLIC_URL
     """
     candidates = []
 
+    # Manual individual environment variables (Highest priority)
+    db_host = (os.getenv("DB_HOST") or os.getenv("PGHOST") or os.getenv("POSTGRES_HOST") or "").strip()
+    db_port_raw = (os.getenv("DB_PORT") or os.getenv("PGPORT") or os.getenv("POSTGRES_PORT") or "5432").strip()
+    db_port = int(db_port_raw) if db_port_raw.isdigit() else 5432
+    db_user = (os.getenv("DB_USER") or os.getenv("PGUSER") or os.getenv("POSTGRES_USER") or "postgres").strip()
+    db_pass = (os.getenv("DB_PASSWORD") or os.getenv("PGPASSWORD") or os.getenv("POSTGRES_PASSWORD") or "").strip()
+    db_name = (os.getenv("DB_NAME") or os.getenv("PGDATABASE") or os.getenv("POSTGRES_DB") or "railway").strip()
+    db_sslmode = (os.getenv("DB_SSLMODE") or "").strip().lower()
+
+    if db_host and db_pass:
+        is_internal = "railway.internal" in db_host or "localhost" in db_host or "127.0.0.1" in db_host
+        is_external_proxy = "proxy.rlwy.net" in db_host
+
+        ssl_modes_to_try = []
+        if db_sslmode:
+            ssl_modes_to_try.append(db_sslmode)
+        elif is_external_proxy:
+            ssl_modes_to_try = ["require", "prefer"]
+        elif is_internal:
+            ssl_modes_to_try = ["prefer", "disable", "require"]
+        else:
+            ssl_modes_to_try = ["prefer", "require", "disable"]
+
+        for mode in ssl_modes_to_try:
+            candidates.append({
+                "desc": f"Individual Env Vars (host={db_host}:{db_port}, user={db_user}, db={db_name}, pass={_mask_secret(db_pass)}, ssl={mode})",
+                "kwargs": {
+                    "host": db_host,
+                    "port": db_port,
+                    "user": db_user,
+                    "password": db_pass,
+                    "dbname": db_name,
+                    "sslmode": mode,
+                    "connect_timeout": 5,
+                }
+            })
+
+    # Fallback: Parse DATABASE_URL and DATABASE_PUBLIC_URL
     db_url = os.getenv("DATABASE_URL")
     pub_url = os.getenv("DATABASE_PUBLIC_URL")
-    pghost = os.getenv("PGHOST")
-    pgport = os.getenv("PGPORT", "5432")
-    pguser = os.getenv("PGUSER", "postgres")
-    pgpass = os.getenv("PGPASSWORD")
-    pgdb = os.getenv("PGDATABASE", "railway")
-
-    # Strategy 1: Explicit PG* variables (injected directly by Railway Postgres plugin)
-    if pghost and pgpass:
-        is_internal = "railway.internal" in pghost or "localhost" in pghost
-        # On Railway internal IPv6 network, SSL is not enabled
-        sslmode_first = "disable" if is_internal else "require"
-        candidates.append({
-            "desc": f"Railway env vars (host={pghost}, user={pguser}, db={pgdb}, ssl={sslmode_first})",
-            "kwargs": {
-                "host": pghost,
-                "port": int(pgport),
-                "user": pguser,
-                "password": pgpass,
-                "dbname": pgdb,
-                "sslmode": sslmode_first,
-                "connect_timeout": 5,
-            }
-        })
-        candidates.append({
-            "desc": f"Railway env vars (host={pghost}, user={pguser}, db={pgdb}, ssl=prefer)",
-            "kwargs": {
-                "host": pghost,
-                "port": int(pgport),
-                "user": pguser,
-                "password": pgpass,
-                "dbname": pgdb,
-                "sslmode": "prefer",
-                "connect_timeout": 5,
-            }
-        })
-
-    # Strategy 2: Parse DATABASE_URL and DATABASE_PUBLIC_URL
-    urls_to_try = []
     if db_url:
         urls_to_try.append(("DATABASE_URL", db_url))
     if pub_url and pub_url != db_url:
