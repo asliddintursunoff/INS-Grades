@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Sparkles, Check, ArrowRight } from 'lucide-react';
 import { Student } from '../types';
-import { apiCall } from '../api';
 import { useLanguage } from '../i18n';
+import { formatDateDDMMYYYY } from '../utils/date';
 import { PaymentModal } from './PaymentModal';
 
 interface PremiumTabProps {
@@ -13,27 +13,7 @@ interface PremiumTabProps {
 export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdated }) => {
   const { t } = useLanguage();
   const isPremium = student.is_premium || student.plan === 'premium';
-  const [loading, setLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-
-  const handleToggleDemo = async (activate: boolean) => {
-    setLoading(true);
-    try {
-      await apiCall(
-        `/api/students/${student.student_id}/premium/`,
-        'POST',
-        {
-          action: activate ? 'activate' : 'deactivate',
-          duration_days: 30,
-        }
-      );
-      if (onPremiumUpdated) onPremiumUpdated();
-    } catch (err: any) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="max-w-md mx-auto py-6 px-3">
@@ -89,13 +69,13 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
             </p>
             {student.premium_expires_at && (
               <div className="text-[11px] font-bold text-emerald-900 pt-1">
-                {t('premium_expires_label')} {new Date(student.premium_expires_at).toLocaleDateString()}
+                {t('premium_expires_label')} {formatDateDDMMYYYY(student.premium_expires_at)}
               </div>
             )}
           </div>
         )}
 
-        {/* 3 Simple Features */}
+        {/* 5 Persuasive Features */}
         <div className="space-y-3 py-1">
           <div className="flex items-start gap-3">
             <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
@@ -123,6 +103,24 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
               {t('premium_feat3')}
             </p>
           </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Check className="w-3.5 h-3.5" />
+            </div>
+            <p className="text-xs font-semibold text-slate-700 leading-snug">
+              {t('premium_feat4')}
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Check className="w-3.5 h-3.5" />
+            </div>
+            <p className="text-xs font-semibold text-slate-700 leading-snug">
+              {t('premium_feat5')}
+            </p>
+          </div>
         </div>
 
         {/* Action Button */}
@@ -145,7 +143,7 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
             </button>
           )}
 
-          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+          <div className="text-center text-[11px] text-slate-400 pt-1">
             <a
               href="https://t.me/asliddin_tursunoff"
               target="_blank"
@@ -154,19 +152,6 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
             >
               {t('contact_support')}
             </a>
-
-            {/* Test switcher */}
-            <button
-              onClick={() => handleToggleDemo(!isPremium)}
-              disabled={loading}
-              className="text-slate-400 hover:text-slate-700 underline transition-colors"
-            >
-              {loading
-                ? '...'
-                : isPremium
-                ? t('premium_demo_free')
-                : t('premium_demo_prem')}
-            </button>
           </div>
         </div>
       </div>

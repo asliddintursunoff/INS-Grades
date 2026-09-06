@@ -146,7 +146,7 @@ async def process_sms_event(event, client: TelegramClient):
                 f"👤 <b>Talaba:</b> {student_name} (<code>{student_id}</code>)\n"
                 f"💰 <b>Summa:</b> {amount:,} so'm\n"
                 f"🆔 <b>Tranzaksiya:</b> <code>{tx_id}</code>\n"
-                f"⭐ <b>Premium muddat:</b> 30 kunga faollashtirildi."
+                f"⭐ <b>Premium muddat:</b> 1 oyga faollashtirildi."
             )
         else:
             extracted = data.get("extracted_amount")

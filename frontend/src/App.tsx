@@ -106,14 +106,23 @@ export default function App() {
 
   const isStudentPremium = currentStudent?.is_premium || currentStudent?.plan === 'premium';
 
+  // If user becomes premium and is on the premium tab, redirect to timetable
+  useEffect(() => {
+    if (isStudentPremium && activeTab === 'premium') {
+      setActiveTab('timetable');
+    }
+  }, [isStudentPremium, activeTab]);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-      {/* Top Navigation */}
+      {/* Top Application Navbar */}
       <Navbar
         currentStudent={currentStudent}
         onOpenPremium={() => {
-          setPremiumLockReason(null);
-          setShowPremiumModal(true);
+          if (!isStudentPremium) {
+            setPremiumLockReason(null);
+            setShowPremiumModal(true);
+          }
         }}
       />
 
@@ -121,7 +130,7 @@ export default function App() {
       <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-5 overflow-x-hidden">
         {/* Navigation Tabs */}
         <div className="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-2xs w-full max-w-full">
-          <nav className="grid grid-cols-5 gap-1" aria-label="Tabs">
+          <nav className={`grid ${isStudentPremium ? 'grid-cols-4' : 'grid-cols-5'} gap-1`} aria-label="Tabs">
             <button
               onClick={() => setActiveTab('timetable')}
               className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
@@ -158,19 +167,19 @@ export default function App() {
               <span className="truncate">{t('homework')}</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('premium')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
-                activeTab === 'premium'
-                  ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-2xs'
-                  : isStudentPremium
-                  ? 'text-amber-800 hover:text-amber-950 hover:bg-amber-50/60'
-                  : 'text-amber-600 hover:text-amber-800 hover:bg-amber-50'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-amber-500" />
-              <span className="truncate font-black">{t('premium')}</span>
-            </button>
+            {!isStudentPremium && (
+              <button
+                onClick={() => setActiveTab('premium')}
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
+                  activeTab === 'premium'
+                    ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-2xs'
+                    : 'text-amber-600 hover:text-amber-800 hover:bg-amber-50'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-amber-500" />
+                <span className="truncate font-black">{t('premium')}</span>
+              </button>
+            )}
 
             <button
               onClick={() => setActiveTab('settings')}

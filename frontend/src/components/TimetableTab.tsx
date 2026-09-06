@@ -227,14 +227,14 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
         <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
         <div className="space-y-1 min-w-0">
           <span className="font-bold text-slate-900 block text-xs">
-            How changing class times works:
+            {t('timetable_help_title')}
           </span>
           <div className="text-slate-600 text-[11px] leading-relaxed space-y-0.5">
             <p>
-              • <strong>⚡ One-Time Make-Up:</strong> If you missed or will miss a class this week, pick an upcoming lecture with the same professor to earn your attendance. Reverts back to normal next week.
+              • <strong>{t('timetable_help_makeup_label')}</strong> {t('timetable_help_makeup_desc')}
             </p>
             <p>
-              • <strong>🔄 Permanent Change:</strong> Switch this class to another section for the rest of the semester.
+              • <strong>{t('timetable_help_perm_label')}</strong> {t('timetable_help_perm_desc')}
             </p>
           </div>
         </div>
@@ -431,12 +431,12 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
 
       {/* Class Schedule Change Modal (Permanent or One-Time) */}
       {activeSubjectSlot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-5 shadow-2xl border border-slate-200 space-y-3.5 max-h-[92vh] flex flex-col overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Modal Header - Compact & Sticky at Top */}
+            <div className="flex items-start justify-between border-b border-slate-100 p-3.5 sm:p-4 shrink-0 bg-white z-10">
               <div className="min-w-0 pr-2">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
                     {activeSubjectSlot.subject_short}
                   </span>
@@ -445,12 +445,18 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                   </h3>
                   {activeSubjectSlot.total_sessions && activeSubjectSlot.total_sessions > 1 && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      Session {activeSubjectSlot.session_number} of {activeSubjectSlot.total_sessions}
+                      {t('modal_session_indicator', {
+                        session: activeSubjectSlot.session_number || 1,
+                        total: activeSubjectSlot.total_sessions,
+                      })}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Showing alternative times with <strong>Prof. {activeSubjectSlot.professor}</strong> for <strong>Session {activeSubjectSlot.session_number || 1}</strong>.
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
+                  {t('modal_showing_alternatives', {
+                    professor: activeSubjectSlot.professor,
+                    session: activeSubjectSlot.session_number || 1,
+                  })}
                 </p>
               </div>
               <button
@@ -461,336 +467,339 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
               </button>
             </div>
 
-            {/* Permanent vs One-Time Toggle */}
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChangeType('permanent');
-                    setFilterUpcomingOnly(false);
-                  }}
-                  className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    changeType === 'permanent'
-                      ? 'bg-white text-blue-700 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Permanent Change</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChangeType('one_time');
-                    setFilterUpcomingOnly(true);
-                  }}
-                  className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    changeType === 'one_time'
-                      ? 'bg-white text-amber-700 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>One-Time Make-Up</span>
-                </button>
-              </div>
-
-              {changeType === 'permanent' ? (
-                <div className="text-[11px] text-blue-900 bg-blue-50/90 border border-blue-200/90 rounded-xl p-3 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-blue-950">
-                    <RefreshCw className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>Permanent Schedule Change (Full Semester)</span>
-                  </div>
-                  <p className="text-slate-600 leading-normal">
-                    Change this lecture session to another group’s weekly time slot for all remaining weeks of the semester. All weekly section options are listed below.
-                  </p>
-                </div>
-              ) : (
-                <div className="text-[11px] text-amber-950 bg-amber-50/90 border border-amber-200/90 rounded-xl p-3 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-amber-950">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>One-Time Make-Up Lesson (Missed a Class?)</span>
-                  </div>
-                  <p className="text-slate-700 leading-normal">
-                    If you missed or cannot attend your regular class this week, pick an <strong>upcoming lesson</strong> from another section with the same professor to earn your attendance. Applies for <strong>this week only</strong> — your schedule automatically reverts next week.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Current Active Slot Info */}
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                <span className="uppercase font-bold tracking-wider text-[10px]">Your Current Time:</span>
-                <span className="font-semibold text-blue-600">{activeSubjectSlot.actual_group}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-800 font-bold text-xs">
-                <span>{activeSubjectSlot.day_name}, {activeSubjectSlot.start_time} - {activeSubjectSlot.end_time}</span>
-                <span className="font-normal text-slate-500">Room: {activeSubjectSlot.room}</span>
-              </div>
-            </div>
-
-            {/* Upcoming Lessons Toggle / Filter */}
-            <div className="flex items-center justify-between gap-2 pt-0.5">
-              <span className="text-xs font-bold text-slate-800">
-                Choose New Section Time:
-              </span>
-              {changeType === 'one_time' ? (
-                <button
-                  onClick={() => setFilterUpcomingOnly(!filterUpcomingOnly)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                    filterUpcomingOnly
-                      ? 'bg-amber-600 text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{filterUpcomingOnly ? `Upcoming Only (${upcomingCount})` : `Show All (${availableSlots.length})`}</span>
-                </button>
-              ) : (
-                <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
-                  All Weekly Sections ({availableSlots.length})
-                </span>
-              )}
-            </div>
-
-            {/* Feedback Message */}
-            {feedbackMessage && (
-              <div
-                className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
-                  feedbackMessage.type === 'success'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-rose-50 border-rose-200 text-rose-800'
-                }`}
-              >
-                {feedbackMessage.type === 'success' ? (
-                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                )}
-                <span>{feedbackMessage.text}</span>
-              </div>
-            )}
-
-            {/* Available options list */}
-            <div className="overflow-y-auto flex-1 space-y-2.5 pr-1 min-h-0">
-              {loadingSlots ? (
-                <div className="py-8 text-center text-xs text-slate-400">
-                  Loading available group lessons and checking conflicts...
-                </div>
-              ) : displayedOptions.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400 space-y-2">
-                  <p>No sections found matching your filter.</p>
-                  {filterUpcomingOnly && (
-                    <button
-                      onClick={() => setFilterUpcomingOnly(false)}
-                      className="text-blue-600 underline font-semibold text-xs"
-                    >
-                      Show all week sections
-                    </button>
-                  )}
-                </div>
-              ) : (
-                displayedOptions.map((option) => {
-                  const isCurrent = option.class_id === activeSubjectSlot.class_id;
-                  const isMultiSession = (option.sessions_per_week && option.sessions_per_week > 1) || (option.slots && option.slots.length > 1);
-
-                  return (
-                    <div
-                      key={option.class_id}
-                      className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between gap-2 ${
-                        isCurrent
-                          ? 'bg-blue-50/60 border-blue-300'
-                          : option.recommended
-                          ? 'bg-emerald-50/40 border-emerald-300 hover:border-emerald-400'
-                          : option.is_available
-                          ? 'bg-white border-slate-200 hover:border-slate-300'
-                          : 'bg-slate-50/80 border-slate-200 opacity-75'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                            <span className="font-bold text-slate-900 text-sm">
-                              {option.group_name}
-                            </span>
-                            
-                            {/* Upcoming / Weekly badge */}
-                            {changeType === 'permanent' ? (
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                Every Week
-                              </span>
-                            ) : option.is_upcoming ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                                <Clock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
-                                Upcoming Lesson
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
-                                Already passed this week
-                              </span>
-                            )}
-
-                            {/* 1 vs 2 lectures per week badge */}
-                            {isMultiSession ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                2 Sessions / Wk
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
-                                1 Session / Wk
-                              </span>
-                            )}
-
-                            {option.is_own_group && (
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
-                                Primary Group
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-1.5 text-slate-600 text-xs mb-1">
-                            <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span className="truncate">{option.professor}</span>
-                          </div>
-
-                          {/* Sessions List */}
-                          {isMultiSession && option.slots && option.slots.length > 0 ? (
-                            <div className="space-y-1 bg-slate-50 p-2 rounded-lg border border-slate-200/80 mb-1">
-                              {option.slots.map((s, sIdx) => (
-                                <div key={sIdx} className="flex items-center justify-between text-xs text-slate-700 flex-wrap gap-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="w-3.5 h-3.5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[9px] inline-flex items-center justify-center shrink-0">
-                                      {sIdx + 1}
-                                    </span>
-                                    <strong className="text-slate-800">{s.day_name}</strong>
-                                    <span className="text-slate-500">({s.start_time} - {s.end_time})</span>
-                                  </div>
-                                  <span className="text-slate-500 text-[11px]">Room: <strong className="text-slate-800">{s.room}</strong></span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="space-y-0.5 text-slate-600 text-xs">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <CalendarIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <strong className="text-slate-800">{option.day_name}</strong>
-                                <span>({option.start_time} - {option.end_time})</span>
-                                <span className="text-slate-300">•</span>
-                                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span>Room: <strong>{option.room}</strong></span>
-                              </div>
-                            </div>
-                          )}
-
-                          {option.conflict_reason && (
-                            <div className="mt-1 text-[11px] font-semibold text-rose-700 flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                              <span>{option.conflict_reason}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Action Button */}
-                        <div className="shrink-0 ml-1">
-                          {isCurrent ? (
-                            <span className="px-3 py-1.5 rounded-lg bg-blue-100 text-blue-800 text-xs font-semibold inline-block">
-                              Active
-                            </span>
-                          ) : (
-                            <button
-                              disabled={applyingClassId === option.class_id}
-                              onClick={() => setSwitchConfirmOption(option)}
-                              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center gap-1 ${
-                                option.is_own_group
-                                  ? 'bg-slate-800 hover:bg-slate-900 text-white'
-                                  : option.is_available
-                                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-2xs'
-                                  : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                              }`}
-                            >
-                              <span>
-                                {applyingClassId === option.class_id
-                                  ? 'Applying...'
-                                  : option.is_own_group
-                                  ? 'Revert to Primary'
-                                  : changeType === 'permanent'
-                                  ? 'Switch to This Time'
-                                  : 'Choose Make-Up'}
-                              </span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Inline Confirmation Prompt inside Modal */}
-            {switchConfirmOption && (
-              <div className={`p-3.5 rounded-xl border space-y-2.5 ${
-                switchConfirmOption.is_own_group
-                  ? 'bg-slate-50 border-slate-300'
-                  : changeType === 'permanent'
-                  ? 'bg-blue-50/90 border-blue-200'
-                  : 'bg-amber-50/90 border-amber-200'
-              }`}>
-                <div className="text-xs font-bold text-slate-900">
-                  {switchConfirmOption.is_own_group
-                    ? `Revert schedule to your primary group (${switchConfirmOption.group_name})?`
-                    : changeType === 'permanent'
-                    ? `Permanently switch ${activeSubjectSlot.subject_short} to section ${switchConfirmOption.group_name}?`
-                    : `Schedule one-time make-up with ${switchConfirmOption.group_name} this week?`}
-                </div>
-
-                <div className="text-[11px] text-slate-700 leading-relaxed space-y-1 bg-white p-2.5 rounded-lg border border-slate-200">
-                  <p>
-                    • <strong>Section & Professor:</strong> {switchConfirmOption.group_name} ({switchConfirmOption.professor})
-                  </p>
-                  <p>
-                    • <strong>Time:</strong> {switchConfirmOption.time_summary || `${switchConfirmOption.day_name} ${switchConfirmOption.start_time}-${switchConfirmOption.end_time}`}
-                  </p>
-                  <p>
-                    • <strong>Duration:</strong>{' '}
-                    {switchConfirmOption.is_own_group ? (
-                      <span className="font-bold text-slate-800">Primary Group Schedule</span>
-                    ) : changeType === 'permanent' ? (
-                      <span className="font-bold text-blue-700">Permanent Change (Entire Semester)</span>
-                    ) : (
-                      <span className="font-bold text-amber-700">One-Time Make-Up (This Week Only)</span>
-                    )}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-1">
+            {/* Modal Body: Single Scrollable Container (allows top explanations to scroll out of way on mobile) */}
+            <div className="overflow-y-auto flex-1 p-3 sm:p-4 space-y-3 min-h-0">
+              {/* Permanent vs One-Time Toggle */}
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
                   <button
-                    onClick={() => setSwitchConfirmOption(null)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleApplyGroupSwitch(switchConfirmOption, changeType)}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold text-white shadow-xs ${
-                      switchConfirmOption.is_own_group
-                        ? 'bg-slate-800 hover:bg-slate-900'
-                        : changeType === 'permanent'
-                        ? 'bg-blue-600 hover:bg-blue-700'
-                        : 'bg-amber-600 hover:bg-amber-700'
+                    type="button"
+                    onClick={() => {
+                      setChangeType('permanent');
+                      setFilterUpcomingOnly(false);
+                    }}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      changeType === 'permanent'
+                        ? 'bg-white text-blue-700 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    {switchConfirmOption.is_own_group
-                      ? 'Confirm Revert'
-                      : changeType === 'permanent'
-                      ? 'Confirm Permanent Change'
-                      : 'Confirm One-Time Make-up'}
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>{t('modal_perm_toggle')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChangeType('one_time');
+                      setFilterUpcomingOnly(true);
+                    }}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      changeType === 'one_time'
+                        ? 'bg-white text-amber-700 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{t('modal_makeup_toggle')}</span>
                   </button>
                 </div>
+
+                {changeType === 'permanent' ? (
+                  <div className="text-[11px] text-blue-900 bg-blue-50/90 border border-blue-200/90 rounded-xl p-3 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                      <RefreshCw className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{t('modal_perm_banner_title')}</span>
+                    </div>
+                    <p className="text-slate-600 leading-normal">
+                      {t('modal_perm_banner_desc')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-amber-950 bg-amber-50/90 border border-amber-200/90 rounded-xl p-3 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>{t('modal_makeup_banner_title')}</span>
+                    </div>
+                    <p className="text-slate-700 leading-normal">
+                      {t('modal_makeup_banner_desc')}
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Current Active Slot Info */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                  <span className="uppercase font-bold tracking-wider text-[10px]">{t('modal_current_time')}</span>
+                  <span className="font-semibold text-blue-600">{activeSubjectSlot.actual_group}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-800 font-bold text-xs">
+                  <span>{activeSubjectSlot.day_name}, {activeSubjectSlot.start_time} - {activeSubjectSlot.end_time}</span>
+                  <span className="font-normal text-slate-500">{t('modal_room_label')} {activeSubjectSlot.room}</span>
+                </div>
+              </div>
+
+              {/* Upcoming Lessons Toggle / Filter */}
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <span className="text-xs font-bold text-slate-800">
+                  {t('modal_choose_time')}
+                </span>
+                {changeType === 'one_time' ? (
+                  <button
+                    onClick={() => setFilterUpcomingOnly(!filterUpcomingOnly)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                      filterUpcomingOnly
+                        ? 'bg-amber-600 text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{filterUpcomingOnly ? t('modal_upcoming_only', { count: upcomingCount }) : t('modal_show_all', { count: availableSlots.length })}</span>
+                  </button>
+                ) : (
+                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+                    {t('modal_all_weekly', { count: availableSlots.length })}
+                  </span>
+                )}
+              </div>
+
+              {/* Feedback Message */}
+              {feedbackMessage && (
+                <div
+                  className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                    feedbackMessage.type === 'success'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-rose-50 border-rose-200 text-rose-800'
+                  }`}
+                >
+                  {feedbackMessage.type === 'success' ? (
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span>{feedbackMessage.text}</span>
+                </div>
+              )}
+
+              {/* Available options list */}
+              <div className="space-y-2.5">
+                {loadingSlots ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    {t('modal_loading_slots')}
+                  </div>
+                ) : displayedOptions.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400 space-y-2">
+                    <p>{t('modal_no_sections')}</p>
+                    {filterUpcomingOnly && (
+                      <button
+                        onClick={() => setFilterUpcomingOnly(false)}
+                        className="text-blue-600 underline font-semibold text-xs"
+                      >
+                        {t('modal_show_all_link')}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  displayedOptions.map((option) => {
+                    const isCurrent = option.class_id === activeSubjectSlot.class_id;
+                    const isMultiSession = (option.sessions_per_week && option.sessions_per_week > 1) || (option.slots && option.slots.length > 1);
+
+                    return (
+                      <div
+                        key={option.class_id}
+                        className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between gap-2 ${
+                          isCurrent
+                            ? 'bg-blue-50/60 border-blue-300'
+                            : option.recommended
+                            ? 'bg-emerald-50/40 border-emerald-300 hover:border-emerald-400'
+                            : option.is_available
+                            ? 'bg-white border-slate-200 hover:border-slate-300'
+                            : 'bg-slate-50/80 border-slate-200 opacity-75'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                              <span className="font-bold text-slate-900 text-sm">
+                                {option.group_name}
+                              </span>
+                              
+                              {/* Upcoming / Weekly badge */}
+                              {changeType === 'permanent' ? (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                  {t('modal_every_week')}
+                                </span>
+                              ) : option.is_upcoming ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                  {t('modal_upcoming_lesson')}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
+                                  {t('modal_passed_this_week')}
+                                </span>
+                              )}
+
+                              {/* 1 vs 2 lectures per week badge */}
+                              {isMultiSession ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {t('modal_sessions_per_wk', { count: 2 })}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
+                                  {t('modal_sessions_per_wk', { count: 1 })}
+                                </span>
+                              )}
+
+                              {option.is_own_group && (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                                  {t('modal_primary_group')}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 text-slate-600 text-xs mb-1">
+                              <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">{option.professor}</span>
+                            </div>
+
+                            {/* Sessions List */}
+                            {isMultiSession && option.slots && option.slots.length > 0 ? (
+                              <div className="space-y-1 bg-slate-50 p-2 rounded-lg border border-slate-200/80 mb-1">
+                                {option.slots.map((s, sIdx) => (
+                                  <div key={sIdx} className="flex items-center justify-between text-xs text-slate-700 flex-wrap gap-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-3.5 h-3.5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[9px] inline-flex items-center justify-center shrink-0">
+                                        {sIdx + 1}
+                                      </span>
+                                      <strong className="text-slate-800">{s.day_name}</strong>
+                                      <span className="text-slate-500">({s.start_time} - {s.end_time})</span>
+                                    </div>
+                                    <span className="text-slate-500 text-[11px]">{t('modal_room_label')} <strong className="text-slate-800">{s.room}</strong></span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="space-y-0.5 text-slate-600 text-xs">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <CalendarIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <strong className="text-slate-800">{option.day_name}</strong>
+                                  <span>({option.start_time} - {option.end_time})</span>
+                                  <span className="text-slate-300">•</span>
+                                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span>{t('modal_room_label')} <strong>{option.room}</strong></span>
+                                </div>
+                              </div>
+                            )}
+
+                            {option.conflict_reason && (
+                              <div className="mt-1 text-[11px] font-semibold text-rose-700 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                                <span>{option.conflict_reason}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Button */}
+                          <div className="shrink-0 ml-1">
+                            {isCurrent ? (
+                              <span className="px-3 py-1.5 rounded-lg bg-blue-100 text-blue-800 text-xs font-semibold inline-block">
+                                {t('modal_active_badge')}
+                              </span>
+                            ) : (
+                              <button
+                                disabled={applyingClassId === option.class_id}
+                                onClick={() => setSwitchConfirmOption(option)}
+                                className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center gap-1 ${
+                                  option.is_own_group
+                                    ? 'bg-slate-800 hover:bg-slate-900 text-white'
+                                    : option.is_available
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-2xs'
+                                    : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                                }`}
+                              >
+                                <span>
+                                  {applyingClassId === option.class_id
+                                    ? t('modal_applying_btn')
+                                    : option.is_own_group
+                                    ? t('modal_revert_btn')
+                                    : changeType === 'permanent'
+                                    ? t('modal_switch_btn')
+                                    : t('modal_choose_makeup_btn')}
+                                </span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Inline Confirmation Prompt inside Modal */}
+              {switchConfirmOption && (
+                <div className={`p-3.5 rounded-xl border space-y-2.5 ${
+                  switchConfirmOption.is_own_group
+                    ? 'bg-slate-50 border-slate-300'
+                    : changeType === 'permanent'
+                    ? 'bg-blue-50/90 border-blue-200'
+                    : 'bg-amber-50/90 border-amber-200'
+                }`}>
+                  <div className="text-xs font-bold text-slate-900">
+                    {switchConfirmOption.is_own_group
+                      ? t('modal_confirm_revert_title', { group: switchConfirmOption.group_name })
+                      : changeType === 'permanent'
+                      ? t('modal_confirm_perm_title', { subject: activeSubjectSlot.subject_short, group: switchConfirmOption.group_name })
+                      : t('modal_confirm_makeup_title', { group: switchConfirmOption.group_name })}
+                  </div>
+
+                  <div className="text-[11px] text-slate-700 leading-relaxed space-y-1 bg-white p-2.5 rounded-lg border border-slate-200">
+                    <p>
+                      • <strong>{t('modal_section_prof_label')}</strong> {switchConfirmOption.group_name} ({switchConfirmOption.professor})
+                    </p>
+                    <p>
+                      • <strong>{t('modal_time_label')}</strong> {switchConfirmOption.time_summary || `${switchConfirmOption.day_name} ${switchConfirmOption.start_time}-${switchConfirmOption.end_time}`}
+                    </p>
+                    <p>
+                      • <strong>{t('modal_duration_label')}</strong>{' '}
+                      {switchConfirmOption.is_own_group ? (
+                        <span className="font-bold text-slate-800">{t('modal_duration_primary')}</span>
+                      ) : changeType === 'permanent' ? (
+                        <span className="font-bold text-blue-700">{t('modal_duration_permanent')}</span>
+                      ) : (
+                        <span className="font-bold text-amber-700">{t('modal_duration_makeup')}</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      onClick={() => setSwitchConfirmOption(null)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                    >
+                      {t('cancel_btn')}
+                    </button>
+                    <button
+                      onClick={() => handleApplyGroupSwitch(switchConfirmOption, changeType)}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold text-white shadow-xs ${
+                        switchConfirmOption.is_own_group
+                          ? 'bg-slate-800 hover:bg-slate-900'
+                          : changeType === 'permanent'
+                          ? 'bg-blue-600 hover:bg-blue-700'
+                          : 'bg-amber-600 hover:bg-amber-700'
+                      }`}
+                    >
+                      {switchConfirmOption.is_own_group
+                        ? t('modal_confirm_revert_btn')
+                        : changeType === 'permanent'
+                        ? t('modal_confirm_perm_btn')
+                        : t('modal_confirm_makeup_btn')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

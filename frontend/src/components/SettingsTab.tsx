@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellOff, Clock, ShieldCheck, UserCheck, Send, CheckCircle2, Lock } from 'lucide-react';
+import { Bell, BellOff, Clock, ShieldCheck, UserCheck, Send, CheckCircle2, Lock, Sparkles, Calendar } from 'lucide-react';
 import { Student, NotificationSettings } from '../types';
 import { apiCall } from '../api';
 import { useLanguage } from '../i18n';
+import { formatDateDDMMYYYY } from '../utils/date';
 
 interface SettingsTabProps {
   student: Student;
@@ -62,6 +63,67 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
+      {/* Premium Status & Expiration Card */}
+      <div className={`border rounded-2xl p-4 sm:p-5 shadow-xs transition-all ${
+        isPremium
+          ? 'bg-gradient-to-br from-amber-50/70 via-yellow-50/40 to-emerald-50/50 border-amber-200'
+          : 'bg-white border-slate-200'
+      }`}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+              isPremium
+                ? 'bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 shadow-xs'
+                : 'bg-slate-100 text-slate-500'
+            }`}>
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <span>{t('profile_premium_card_title')}</span>
+                {isPremium ? (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-2xs border border-amber-300">
+                    PREMIUM ⭐
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    {t('profile_premium_status_free')}
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {isPremium ? t('profile_premium_status_active') : t('premium_only_msg')}
+              </p>
+            </div>
+          </div>
+
+          {!isPremium && onRequirePremium && (
+            <button
+              onClick={() => onRequirePremium(t('premium_only_msg'))}
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all"
+            >
+              {t('profile_premium_upgrade_btn')}
+            </button>
+          )}
+        </div>
+
+        {isPremium && (
+          <div className="mt-3.5 pt-3 border-t border-amber-200/60 flex items-center justify-between text-xs flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 text-amber-950 font-semibold">
+              <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                {student.premium_expires_at
+                  ? t('profile_premium_deadline', { date: formatDateDDMMYYYY(student.premium_expires_at) })
+                  : t('premium_active')}
+              </span>
+            </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-100/80 text-amber-900 border border-amber-200/80">
+              {t('profile_premium_plan_badge')}
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Settings Card */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-5">
         <div>

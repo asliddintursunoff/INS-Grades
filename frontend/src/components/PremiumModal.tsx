@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Sparkles, Check, X, ArrowRight } from 'lucide-react';
-import { apiCall } from '../api';
 import { useLanguage } from '../i18n';
 import { PaymentModal } from './PaymentModal';
 
@@ -24,30 +23,9 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
   lockReason,
 }) => {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   if (!isOpen) return null;
-
-  const handleToggleDemo = async (activate: boolean) => {
-    setLoading(true);
-    try {
-      await apiCall(
-        `/api/students/${studentId}/premium/`,
-        'POST',
-        {
-          action: activate ? 'activate' : 'deactivate',
-          duration_days: 30,
-        }
-      );
-      if (onPremiumUpdated) onPremiumUpdated();
-      onClose();
-    } catch (err: any) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -90,7 +68,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
           </div>
         )}
 
-        {/* 3 Features */}
+        {/* 5 Persuasive Features */}
         <div className="space-y-2.5 py-1">
           <div className="flex items-start gap-2.5 text-xs text-slate-700 font-medium">
             <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
@@ -111,6 +89,20 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
               <Check className="w-3 h-3" />
             </div>
             <span>{t('premium_feat3')}</span>
+          </div>
+
+          <div className="flex items-start gap-2.5 text-xs text-slate-700 font-medium">
+            <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Check className="w-3 h-3" />
+            </div>
+            <span>{t('premium_feat4')}</span>
+          </div>
+
+          <div className="flex items-start gap-2.5 text-xs text-slate-700 font-medium">
+            <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Check className="w-3 h-3" />
+            </div>
+            <span>{t('premium_feat5')}</span>
           </div>
         </div>
 
@@ -134,18 +126,10 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
             </button>
           )}
 
-          <div className="flex items-center justify-between text-xs pt-1">
-            <button
-              onClick={() => handleToggleDemo(!isPremium)}
-              disabled={loading}
-              className="text-[11px] text-slate-500 hover:text-slate-800 underline"
-            >
-              {loading ? '...' : isPremium ? t('premium_demo_free') : t('premium_demo_prem')}
-            </button>
-
+          <div className="flex items-center justify-center text-xs pt-1">
             <button
               onClick={onClose}
-              className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100"
+              className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 px-4 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
             >
               {t('premium_close')}
             </button>
