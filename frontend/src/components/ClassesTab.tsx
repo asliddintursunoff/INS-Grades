@@ -16,6 +16,7 @@ import {
 import { StudentClass } from '../types';
 import { apiCall } from '../api';
 import { RetakeCourseModal } from './RetakeCourseModal';
+import { useLanguage } from '../i18n';
 
 interface ClassesTabProps {
   studentId: string;
@@ -30,6 +31,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
   isPremium = false,
   onRequirePremium,
 }) => {
+  const { t } = useLanguage();
   const [classes, setClasses] = useState<StudentClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -134,7 +136,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
           <button
             onClick={() => {
               if (!isPremium && onRequirePremium) {
-                onRequirePremium("Qayta o'qish (Retake) kurslarni qo'shish");
+                onRequirePremium(t('premium_only_retake'));
               } else {
                 setShowRetakeModal(true);
               }
@@ -142,7 +144,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs shrink-0"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>+ Retake a Course</span>
+            <span>+ {t('add_retake')}</span>
           </button>
         </div>
       </div>
@@ -245,7 +247,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
                     disabled={actionLoadingId === c.class_id}
                     onClick={() => {
                       if (!isPremium && onRequirePremium) {
-                        onRequirePremium("Kursni bekor qilish (Drop)");
+                        onRequirePremium(t('premium_only_drop'));
                       } else {
                         setDropConfirmClass(c);
                       }
@@ -254,7 +256,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>
-                      {actionLoadingId === c.class_id ? 'Processing...' : 'Drop Course'}
+                      {actionLoadingId === c.class_id ? 'Processing...' : t('drop_course')}
                     </span>
                   </button>
                 </div>
@@ -310,7 +312,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
                     disabled={actionLoadingId === c.class_id}
                     onClick={() => {
                       if (!isPremium && onRequirePremium) {
-                        onRequirePremium("Kursni qayta tiklash (Re-enroll)");
+                        onRequirePremium(t('premium_only_retake'));
                       } else {
                         handleQuickRetake(c);
                       }
@@ -319,7 +321,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>
-                      {actionLoadingId === c.class_id ? 'Re-enrolling...' : 'Quick Re-enroll'}
+                      {actionLoadingId === c.class_id ? 'Re-enrolling...' : t('reenroll_course')}
                     </span>
                   </button>
                 </div>

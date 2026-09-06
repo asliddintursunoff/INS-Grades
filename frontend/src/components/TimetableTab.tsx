@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { TimetableResponse, ScheduleSlot, AvailableGroupOption } from '../types';
 import { apiCall } from '../api';
+import { useLanguage } from '../i18n';
 
 interface TimetableTabProps {
   studentId: string;
@@ -31,6 +32,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
   isPremium,
   onRequirePremium,
 }) => {
+  const { t } = useLanguage();
   const [data, setData] = useState<TimetableResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null); // null = all days
@@ -62,18 +64,18 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
   }, [fetchTimetable]);
 
   const days = [
-    { num: 1, label: 'Monday' },
-    { num: 2, label: 'Tuesday' },
-    { num: 3, label: 'Wednesday' },
-    { num: 4, label: 'Thursday' },
-    { num: 5, label: 'Friday' },
+    { num: 1, label: t('day_1'), short: t('day_1_short') },
+    { num: 2, label: t('day_2'), short: t('day_2_short') },
+    { num: 3, label: t('day_3'), short: t('day_3_short') },
+    { num: 4, label: t('day_4'), short: t('day_4_short') },
+    { num: 5, label: t('day_5'), short: t('day_5_short') },
   ];
 
   // Open modal to see all slots for class / switch section
   const handleOpenSlotsModal = async (slot: ScheduleSlot) => {
     if (!studentHasPremium) {
       if (onRequirePremium) {
-        onRequirePremium("Dars vaqtlarini o'zgartirish (Make-up darslar va Doimiy almashtirish)");
+        onRequirePremium(t('premium_only_change'));
       }
       return;
     }
@@ -103,7 +105,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
   const handleRevertSlot = async (slot: ScheduleSlot) => {
     if (!studentHasPremium) {
       if (onRequirePremium) {
-        onRequirePremium("Dars jadvalini o'zgartirish");
+        onRequirePremium(t('premium_only_change'));
       }
       return;
     }
@@ -248,7 +250,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
-          All Days
+          {t('all_days')}
         </button>
         {days.map((d) => (
           <button
@@ -273,7 +275,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
       ) : filteredSchedule.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center space-y-2">
           <CalendarIcon className="w-8 h-8 text-slate-300 mx-auto" />
-          <div className="text-sm font-semibold text-slate-700">No classes scheduled for this day</div>
+          <div className="text-sm font-semibold text-slate-700">{t('no_classes')}</div>
           <div className="text-xs text-slate-400">
             Enjoy your free time or check other days using the filter above.
           </div>
@@ -364,11 +366,11 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                               </div>
                               <div className="flex items-center gap-1">
                                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span>Room: <strong className="text-slate-700">{slot.room}</strong></span>
+                                <span>{t('room')}: <strong className="text-slate-700">{slot.room}</strong></span>
                               </div>
                               <div className="flex items-center gap-1 text-[11px] text-slate-500">
                                 <Layers className="w-3.5 h-3.5 shrink-0" />
-                                <span>Group: <strong className="text-blue-700">{slot.actual_group}</strong></span>
+                                <span>{t('group')}: <strong className="text-blue-700">{slot.actual_group}</strong></span>
                               </div>
                             </div>
 
@@ -396,7 +398,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                                 title="Revert back to primary group schedule"
                               >
                                 <RotateCcw className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                                <span>Revert to Primary</span>
+                                <span>{t('revert_primary')}</span>
                               </button>
                               <button
                                 onClick={() => handleOpenSlotsModal(slot)}
@@ -404,7 +406,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                                   slot.is_one_time ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'
                                 }`}
                               >
-                                <span>Change Time</span>
+                                <span>{t('change_time')}</span>
                               </button>
                             </>
                           ) : (
@@ -414,7 +416,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                               title="Change class time (permanent or one-time make-up)"
                             >
                               <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                              <span>Change Class Time</span>
+                              <span>{t('change_time')}</span>
                             </button>
                           )}
                         </div>

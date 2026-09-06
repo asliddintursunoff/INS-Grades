@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Settings, Calendar, Database, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
+import { BookOpen, Settings, Calendar, Database, AlertCircle, RefreshCw, Sparkles, FileText } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { ClassesTab } from './components/ClassesTab';
 import { SettingsTab } from './components/SettingsTab';
 import { TimetableTab } from './components/TimetableTab';
 import { PremiumTab } from './components/PremiumTab';
 import { PremiumModal } from './components/PremiumModal';
+import { HomeworkTab } from './components/HomeworkTab';
 import { Student } from './types';
 import { apiCall, getTelegramUser } from './api';
+import { useLanguage } from './i18n';
 
-type TabKey = 'timetable' | 'classes' | 'premium' | 'settings';
+type TabKey = 'timetable' | 'classes' | 'homework' | 'premium' | 'settings';
 
 export default function App() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabKey>('timetable');
   const [students, setStudents] = useState<Student[]>([]);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
@@ -118,34 +121,46 @@ export default function App() {
       <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-5 overflow-x-hidden">
         {/* Navigation Tabs */}
         <div className="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-2xs w-full max-w-full">
-          <nav className="grid grid-cols-4 gap-1" aria-label="Tabs">
+          <nav className="grid grid-cols-5 gap-1" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('timetable')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 activeTab === 'timetable'
                   ? 'bg-blue-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="truncate">📅 Timetable</span>
+              <span className="truncate">{t('timetable')}</span>
             </button>
 
             <button
               onClick={() => setActiveTab('classes')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 activeTab === 'classes'
                   ? 'bg-blue-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="truncate">📚 Courses</span>
+              <span className="truncate">{t('courses')}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('homework')}
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
+                activeTab === 'homework'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="truncate">{t('homework')}</span>
             </button>
 
             <button
               onClick={() => setActiveTab('premium')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 activeTab === 'premium'
                   ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-2xs'
                   : isStudentPremium
@@ -154,19 +169,19 @@ export default function App() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-amber-500" />
-              <span className="truncate font-black">⭐ Premium</span>
+              <span className="truncate font-black">{t('premium')}</span>
             </button>
 
             <button
               onClick={() => setActiveTab('settings')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 activeTab === 'settings'
                   ? 'bg-blue-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="truncate">⚙️ Profile</span>
+              <span className="truncate">{t('profile')}</span>
             </button>
           </nav>
         </div>
@@ -192,6 +207,10 @@ export default function App() {
                 isPremium={isStudentPremium}
                 onRequirePremium={handleRequirePremium}
               />
+            )}
+
+            {activeTab === 'homework' && (
+              <HomeworkTab />
             )}
 
             {activeTab === 'premium' && (

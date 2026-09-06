@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, BellOff, Clock, ShieldCheck, UserCheck, Send, CheckCircle2, Lock } from 'lucide-react';
 import { Student, NotificationSettings } from '../types';
 import { apiCall } from '../api';
+import { useLanguage } from '../i18n';
 
 interface SettingsTabProps {
   student: Student;
@@ -16,6 +17,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   isPremium = false,
   onRequirePremium,
 }) => {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState<NotificationSettings>({ enabled: false, minutes_before: 30 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,7 +39,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const updateSettings = async (newSettings: Partial<NotificationSettings>) => {
     if (!isPremium && newSettings.enabled) {
       if (onRequirePremium) {
-        onRequirePremium("Dars eslatmalarini Telegram orqali avtomatik olish");
+        onRequirePremium(t('premium_only_notif'));
       }
       return;
     }
@@ -65,7 +67,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Bell className="w-5 h-5 text-blue-600" />
-            Telegram Notification Settings
+            {t('notif_title')}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             The university bot will automatically dispatch class reminder notifications to your linked Telegram account before each lecture starts.
@@ -87,7 +89,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
             <div>
               <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>Receive Class Reminders</span>
+                <span>{t('notif_toggle')}</span>
                 {!isPremium && (
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 border border-amber-300">
                     PREMIUM ⭐
@@ -96,8 +98,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
               <div className="text-xs text-slate-500">
                 {isPremium
-                  ? (settings.enabled ? 'Active: Telegram bot sends automated class alerts' : 'Disabled: Alerts are muted')
-                  : 'Faqat Premium foydalanuvchilar uchun mavjud (10 000 so\'m/oyiga)'}
+                  ? (settings.enabled ? t('notif_active') : t('notif_disabled'))
+                  : t('premium_only_notif')}
               </div>
             </div>
           </div>
@@ -119,7 +121,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <div className="space-y-2 pt-2">
             <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-blue-600" />
-              <span>Reminder Timing (Minutes Before Class):</span>
+              <span>{t('reminder_timing')}</span>
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {minutesOptions.map((min) => (
@@ -133,7 +135,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  {min} min
+                  {min} {t('minutes')}
                 </button>
               ))}
             </div>
@@ -145,7 +147,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
           <Send className="w-4 h-4 text-blue-600" />
-          Telegram Account Link
+          {t('telegram_link')}
         </h3>
 
         {student.telegram_id ? (
@@ -162,7 +164,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
             </div>
             <span className="px-2.5 py-1 rounded-md bg-emerald-200/60 text-emerald-900 font-bold text-[11px]">
-              Connected
+              {t('connected')}
             </span>
           </div>
         ) : (
@@ -170,7 +172,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <div className="flex items-center justify-between">
               <div className="font-bold text-amber-900">Telegram Link Status</div>
               <span className="px-2.5 py-1 rounded-md bg-amber-200/60 text-amber-900 font-bold text-[11px]">
-                Pending Link
+                {t('pending')}
               </span>
             </div>
             <div className="text-[11px] text-amber-800">
@@ -186,7 +188,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Lock className="w-4 h-4 text-slate-400" />
-            Official Academic Profile (Read Only)
+            {t('academic_profile')}
           </h3>
           <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
