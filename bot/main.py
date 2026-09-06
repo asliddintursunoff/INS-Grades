@@ -6,6 +6,14 @@ import logging
 from datetime import datetime
 import httpx
 
+try:
+    from dotenv import load_dotenv
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    load_dotenv(os.path.join(current_dir, ".env"))
+    load_dotenv(os.path.join(os.path.dirname(current_dir), ".env"))
+except ImportError:
+    pass
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -16,6 +24,12 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 API_URL = (os.getenv("API_URL") or "http://backend:3000").rstrip("/")
 API_KEY = os.getenv("API_KEY", "ins_secure_api_key_2026_x89a")
 APP_URL = os.getenv("APP_URL", "https://ins-grades.vercel.app")
+
+# S3 Storage Configuration
+S3_ENDPOINT_URL = (os.getenv("S3_ENDPOINT_URL") or "https://t3.storageapi.dev").rstrip("/")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "resilient-module-m3qmihat")
+S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "")
+S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
 
 DAY_NAMES = {
     1: "Monday",
@@ -79,6 +93,49 @@ class TimetableTelegramBot:
             logger.error(f"[TG Error] send_message: {e}")
             return None
 
+    async def send_photo(self, chat_id: int, photo_url: str, caption: str = None, reply_markup: dict = None):
+        """Send a photo to a Telegram user from URL or downloaded bytes."""
+        url = f"{self.tg_base}/sendPhoto"
+
+        # 1. Try sending via Telegram URL download
+        payload = {
+            "chat_id": chat_id,
+            "photo": photo_url,
+            "parse_mode": "HTML",
+        }
+        if caption:
+            payload["caption"] = caption
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+
+        try:
+            r = await self.client.post(url, json=payload, timeout=15.0)
+            res = r.json()
+            if res.get("ok"):
+                return res
+            logger.info(f"[TG] Direct photo URL returned: {res.get('description')}, fallback to binary upload...")
+        except Exception as e:
+            logger.warning(f"[TG] send_photo via direct URL failed ({e}), attempting binary upload...")
+
+        # 2. Fallback: Download image content and upload as multipart form data
+        try:
+            fetch_url = photo_url
+            if fetch_url.startswith("/"):
+                fetch_url = f"{self.api_url}{fetch_url}"
+
+            img_resp = await self.client.get(fetch_url, timeout=20.0)
+            if img_resp.status_code == 200:
+                files = {"photo": ("timetable.png", img_resp.content, "image/png")}
+                data = {"chat_id": str(chat_id), "parse_mode": "HTML"}
+                if caption:
+                    data["caption"] = caption
+                r = await self.client.post(url, data=data, files=files, timeout=25.0)
+                return r.json()
+        except Exception as exc:
+            logger.error(f"[TG Error] send_photo binary upload error: {exc}")
+
+        return None
+
     async def handle_start(self, chat_id: int, user: dict):
         """Handle /start command."""
         tg_id = user.get("id")
@@ -97,6 +154,7 @@ class TimetableTelegramBot:
                 f"Commands:\n"
                 f"📅 /today - Today's Schedule\n"
                 f"🗓 /week - Full Week Timetable\n"
+                f"🖼 /image - Official Timetable Photo\n"
                 f"📝 /homework - Pending Assignments\n"
                 f"📊 /attendance - Absences & Status\n"
             )
@@ -130,12 +188,14 @@ class TimetableTelegramBot:
                 await self.handle_today(chat_id, tg_id)
             elif cmd in ("/week", "/schedule"):
                 await self.handle_week(chat_id, tg_id)
+            elif cmd in ("/image", "/photo", "/timetable_photo"):
+                await self.handle_photo(chat_id, tg_id)
             elif cmd == "/homework":
                 await self.handle_homework(chat_id, tg_id)
             elif cmd == "/attendance":
                 await self.handle_attendance(chat_id, tg_id)
             else:
-                await self.send_message(chat_id, "Unknown command. Use /today, /week, /homework, or /attendance.")
+                await self.send_message(chat_id, "Unknown command. Use /today, /week, /image, /homework, or /attendance.")
             return
 
         # Attempt to link student ID
@@ -220,6 +280,42 @@ class TimetableTelegramBot:
                 lines.append("")
 
         await self.send_message(chat_id, "\n".join(lines))
+
+    async def handle_photo(self, chat_id: int, tg_id: int):
+        """Send the official group timetable screenshot to the student."""
+        students = await self.api_get(f"students/?telegram_id={tg_id}")
+        if not students or len(students) == 0:
+            await self.send_message(chat_id, "⚠️ Your account is not linked. Please send your Student ID first.")
+            return
+
+        student = students[0]
+        group_name = student.get("group_name", "your group")
+        image_url = student.get("timetable_image_url")
+
+        if not image_url:
+            tt_data = await self.api_get(f"timetable/student/{student['student_id']}/")
+            if tt_data:
+                image_url = tt_data.get("timetable_image_url")
+
+        if not image_url:
+            await self.send_message(
+                chat_id,
+                f"ℹ️ No official timetable photo is currently linked for group <b>{group_name}</b>.\n"
+                f"The image will be uploaded automatically during the next timetable synchronization run."
+            )
+            return
+
+        caption = (
+            f"🖼 <b>Official Timetable Screenshot</b>\n\n"
+            f"👥 <b>Group:</b> {group_name}\n"
+            f"🎓 <b>Student:</b> {student['full_name']} (<code>{student['student_id']}</code>)"
+        )
+        res = await self.send_photo(chat_id, image_url, caption=caption)
+        if not res or not res.get("ok"):
+            await self.send_message(
+                chat_id,
+                f"⚠️ Unable to send image preview directly. You can view it here:\n<a href=\"{image_url}\">Open Timetable Photo</a>"
+            )
 
     async def handle_homework(self, chat_id: int, tg_id: int):
         """Send homework status."""

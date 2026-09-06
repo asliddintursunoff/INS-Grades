@@ -154,7 +154,12 @@ def get_student_timetable(request, student_id):
 
     return Response({
         "student": StudentSerializer(student).data,
-        "timetable": schedule
+        "student_id": student.student_id,
+        "student_name": student.full_name,
+        "group_name": student.group.group_name if student.group else "",
+        "timetable_image_url": student.group.timetable_image_url if (student.group and student.group.timetable_image_url) else "",
+        "timetable": schedule,
+        "schedule": schedule,
     })
 
 
@@ -168,6 +173,8 @@ def get_group_timetable(request, group_id):
 
     return Response({
         "group": GroupSerializer(group).data,
+        "group_name": group.group_name,
+        "timetable_image_url": group.timetable_image_url or "",
         "slots": GroupTimetableSlotSerializer(slots, many=True).data
     })
 

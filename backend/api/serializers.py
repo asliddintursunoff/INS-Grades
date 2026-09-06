@@ -47,6 +47,7 @@ class CourseClassSerializer(serializers.ModelSerializer):
 class StudentSerializer(serializers.ModelSerializer):
     group = GroupSerializer(read_only=True)
     group_name = serializers.CharField(source='group.group_name', read_only=True)
+    timetable_image_url = serializers.CharField(source='group.timetable_image_url', read_only=True, default='')
 
     class Meta:
         model = Student
@@ -55,6 +56,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'full_name',
             'group',
             'group_name',
+            'timetable_image_url',
             'year_of_study',
             'telegram_id',
             'telegram_username',

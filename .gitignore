@@ -13,6 +13,11 @@ coverage/
 __pycache__/
 *.py[cod]
 *$py.class
+venv/
+.venv/
+.~lock*
+staticfiles/
+screenshots/
 
 # Root runtime files (dev container only, not part of production multi-service repo)
 /server.ts
