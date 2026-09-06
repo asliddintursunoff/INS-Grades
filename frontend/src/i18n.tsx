@@ -20,15 +20,16 @@ export const translations = {
     homework_title: 'My Homework',
     homework_msg: 'Will be available from 14 September for premium users.',
 
-    // Premium Features Copy
+    // Premium Features Copy (6 Exact Points)
     premium_title: 'INS Grades Premium',
     premium_price: '10,000 UZS',
     premium_period: '/ month',
-    premium_feat1: '⚡ Smart Make-Up Finder: If you miss a class, our smart system automatically finds an upcoming flexible class with the same professor to save your attendance.',
-    premium_feat2: '🔄 Flexible Schedule: Switch any class permanently to another section for the entire semester.',
-    premium_feat3: '🔔 Telegram Class Alerts: Automatic smart notifications sent before each class so you are never late.',
-    premium_feat4: '📚 Course Drop & Retake Manager: Effortlessly drop unwanted courses or register retakes directly.',
-    premium_feat5: '📝 My Homework Tracker: Deadlines and assignment hub (Available from 14 September).',
+    premium_feat1: '⚡ Smart Make-Up Classes: Missed a class? We automatically find an upcoming class with the same professor that fits your schedule, helping you recover your attendance.',
+    premium_feat2: '🔄 Flexible Class Switching: Need a different time? Switch to another section and keep your new schedule for the rest of the semester.',
+    premium_feat3: '📅 Auto-Updating Timetable: Your timetable automatically updates whenever your classes or sections change, so you always have the latest schedule in one place.',
+    premium_feat4: '🔔 Telegram Class Reminders: Get automatic reminders before every class on Telegram, so you know where and when you need to be.',
+    premium_feat5: '📚 Course Drop & Retake: Drop courses you no longer need or register for retakes directly and manage everything from one place.',
+    premium_feat6: '📝 Homework Tracker: Keep all your assignments and deadlines organized in one place. Available from September 14.',
     premium_btn: 'Get Premium',
     premium_active: 'Active Plan',
     premium_active_title: 'Your Premium Subscription is Active ⭐',
@@ -48,9 +49,10 @@ export const translations = {
     celebration_title: 'Congratulations! You are now Premium ⭐',
     celebration_desc: 'All powerful features, schedule customizations, and class reminders have been unlocked for your account.',
     celebration_item1: '⚡ Smart Make-Up: Automatic flexible class finder',
-    celebration_item2: '🔄 Semester-long schedule customization',
-    celebration_item3: '🔔 Telegram notifications before each lecture',
-    celebration_item4: '📚 Full course drop & retake management',
+    celebration_item2: '🔄 Flexible class switching across sections',
+    celebration_item3: '📅 Instant auto-updating timetable',
+    celebration_item4: '🔔 Telegram notifications before every class',
+    celebration_item5: '📚 Full course drop & retake manager',
     celebration_btn: "Awesome! Let's Go 🚀",
 
     // Profile & Premium Expiry
@@ -107,10 +109,10 @@ export const translations = {
 
     // Timetable Quick Help Banner
     timetable_help_title: 'How changing class times works:',
-    timetable_help_makeup_label: '⚡ One-Time Make-Up:',
-    timetable_help_makeup_desc: 'If you miss or will miss a class this week, our smart system automatically finds an upcoming flexible lesson with the same professor to earn your attendance. Schedule reverts back to normal next week.',
-    timetable_help_perm_label: '🔄 Permanent Change:',
-    timetable_help_perm_desc: 'Switch this class to another section for the rest of the semester.',
+    timetable_help_makeup_label: '⚡ Smart Make-Up Classes:',
+    timetable_help_makeup_desc: 'Missed a class? We automatically find an upcoming class with the same professor that fits your schedule, helping you recover your attendance. Reverts back to normal next week.',
+    timetable_help_perm_label: '🔄 Flexible Class Switching:',
+    timetable_help_perm_desc: 'Need a different time? Switch to another section and keep your new schedule for the rest of the semester.',
 
     // Timetable Schedule Change Modal
     modal_showing_alternatives: 'Showing alternative times with Prof. {professor} for Session {session}.',
@@ -118,9 +120,9 @@ export const translations = {
     modal_perm_toggle: 'Permanent Change',
     modal_makeup_toggle: 'One-Time Make-Up',
     modal_perm_banner_title: 'Permanent Schedule Change (Full Semester)',
-    modal_perm_banner_desc: 'Change this lecture session to another group’s weekly time slot for all remaining weeks of the semester. All weekly section options are listed below.',
-    modal_makeup_banner_title: 'One-Time Make-Up Lesson (Missed a Class?)',
-    modal_makeup_banner_desc: 'If you missed or cannot attend your regular class this week, our smart system finds an upcoming flexible lesson from another section with the same professor to earn your attendance. Applies for this week only — your schedule automatically reverts next week.',
+    modal_perm_banner_desc: 'Switch to another section and keep your new schedule for the rest of the semester. All weekly options are listed below.',
+    modal_makeup_banner_title: 'Smart Make-Up Lesson (Missed a Class?)',
+    modal_makeup_banner_desc: 'Missed a class? We automatically find an upcoming class with the same professor that fits your schedule, helping you recover your attendance. Applies for this week only.',
     modal_current_time: 'Your Current Time:',
     modal_room_label: 'Room:',
     modal_choose_time: 'Choose New Section Time:',
@@ -216,15 +218,16 @@ export const translations = {
     homework_title: 'Mening vazifalarim',
     homework_msg: '14-sentabrdan boshlab premium foydalanuvchilar uchun taqdim etiladi.',
 
-    // Premium Features Copy
+    // Premium Features Copy (6 Exact Points)
     premium_title: 'INS Grades Premium',
     premium_price: "10 000 so'm",
     premium_period: '/ oyiga',
-    premium_feat1: "⚡ Aqlli Make-Up tizimi: Agar darsni qoldirsangiz, tizim davomatingizni saqlab qolish uchun shu o'qituvchining boshqa bo'sh guruhidagi qulay darsini avtomatik topib beradi.",
-    premium_feat2: "🔄 Moslashuvchan dars jadvali: Xohlagan dars vaqtingizni butun semestr uchun boshqa qulay guruhga o'tkazing.",
-    premium_feat3: "🔔 Telegram eslatmalari: Har bir dars boshlanishidan oldin botdan avtomatik eslatmalar keladi.",
-    premium_feat4: "📚 Fanlarni bekor qilish va Retake: Fanlarni tashlash (drop) yoki retake fanlarni o'zingiz mustaqil boshqaring.",
-    premium_feat5: "📝 Mening vazifalarim: Barcha uyga vazifalar va topshirish muddatlari (14-sentabrdan taqdim etiladi).",
+    premium_feat1: "⚡ Aqlli Make-Up darslar: Dars qolib ketdimi? Davomatni tiklash uchun shu o'qituvchining sizga mos keladigan boshqa darsini avtomatik topib beramiz.",
+    premium_feat2: "🔄 Moslashuvchan dars almashish: Boshqa vaqt kerakmi? Boshqa guruhga o'ting va yangi jadvalingizni semestr oxirigacha saqlang.",
+    premium_feat3: "📅 Avtomatik yangilanadigan jadval: Darslaringiz yoki guruhlaringiz o'zgarganda jadvalingiz avtomatik yangilanadi va doim eng so'nggi holatda turadi.",
+    premium_feat4: "🔔 Telegram dars eslatmalari: Har bir darsdan oldin Telegramda avtomatik eslatma oling va qayerda, qachon bo'lishingizni doim biling.",
+    premium_feat5: "📚 Fanlarni bekor qilish va Retake: Keraksiz fanlarni tashlang (drop) yoki to'g'ridan-to'g'ri retake fanlarga yozilib, hammasini bir joydan boshqaring.",
+    premium_feat6: "📝 Vazifalar nazorati: Barcha topshiriqlar va muddatlarni bir joyda tartibli saqlang. 14-sentabrdan taqdim etiladi.",
     premium_btn: 'Premium olish',
     premium_active: 'Faol Tarif',
     premium_active_title: 'Sizda Premium tarif faol ⭐',
@@ -245,8 +248,9 @@ export const translations = {
     celebration_desc: "Hisobingiz uchun barcha maxsus imkoniyatlar va dars eslatmalari to'liq ochildi.",
     celebration_item1: "⚡ Aqlli Make-Up: Qulay dars vaqtini avtomatik topish",
     celebration_item2: "🔄 Dars jadvalini butun semestrga moslashtirish",
-    celebration_item3: "🔔 Har bir darsdan oldin Telegram xabarnomalari",
-    celebration_item4: "📚 Retake olish va fanlarni bekor qilish (drop)",
+    celebration_item3: "📅 Jadvalning avtomatik yangilanishi",
+    celebration_item4: "🔔 Har bir darsdan oldin Telegram xabarnomalari",
+    celebration_item5: "📚 Retake olish va fanlarni bekor qilish (drop)",
     celebration_btn: 'Ajoyib! Boshlash 🚀',
 
     // Profile & Premium Expiry
@@ -303,10 +307,10 @@ export const translations = {
 
     // Timetable Quick Help Banner
     timetable_help_title: "Dars vaqtini o'zgartirish qanday ishlaydi:",
-    timetable_help_makeup_label: '⚡ Bir martalik Make-Up:',
-    timetable_help_makeup_desc: "Agar bu hafta darsingiz qolib ketsa, aqlli tizimimiz davomat olishingiz uchun shu o'qituvchining boshqa guruhidagi qulay darsini avtomatik topib beradi. Keyingi haftadan dars jadvali avtomatik o'z holiga qaytadi.",
-    timetable_help_perm_label: "🔄 Doimiy o'zgartirish:",
-    timetable_help_perm_desc: "Ushbu fanni butun semestr oxirigacha boshqa guruh vaqtiga o'tkazing.",
+    timetable_help_makeup_label: '⚡ Aqlli Make-Up darslar:',
+    timetable_help_makeup_desc: "Dars qolib ketdimi? Davomatni tiklash uchun shu o'qituvchining sizga mos keladigan boshqa darsini avtomatik topib beramiz. Keyingi haftadan dars jadvali avtomatik o'z holiga qaytadi.",
+    timetable_help_perm_label: "🔄 Moslashuvchan dars almashish:",
+    timetable_help_perm_desc: "Boshqa vaqt kerakmi? Boshqa guruhga o'ting va yangi jadvalingizni semestr oxirigacha saqlang.",
 
     // Timetable Schedule Change Modal
     modal_showing_alternatives: "Prof. {professor} bilan {session}-dars uchun boshqa guruh vaqtlari.",
@@ -314,9 +318,9 @@ export const translations = {
     modal_perm_toggle: "Doimiy o'zgartirish",
     modal_makeup_toggle: 'Bir martalik Make-Up',
     modal_perm_banner_title: "Doimiy dars vaqtini o'zgartirish (Semestr oxirigacha)",
-    modal_perm_banner_desc: "Ushbu darsni semestrning barcha qolgan haftalari uchun boshqa guruh vaqtiga ko'chiring. Barcha haftalik variantlar quyida ko'rsatilgan.",
-    modal_makeup_banner_title: "Bir martalik Make-Up dars (Dars qoldirdingizmi?)",
-    modal_makeup_banner_desc: "Agar bu hafta darsingizni qoldirgan bo'lsangiz, aqlli tizimimiz davomat olish uchun shu o'qituvchining boshqa guruhidagi kelgusi qulay darsini topib beradi. Faqat shu hafta uchun amal qiladi — keyingi hafta jadval asl holiga qaytadi.",
+    modal_perm_banner_desc: "Boshqa guruhga o'ting va yangi jadvalingizni semestr oxirigacha saqlang. Barcha haftalik variantlar quyida ko'rsatilgan.",
+    modal_makeup_banner_title: "Aqlli Make-Up dars (Dars qoldirdingizmi?)",
+    modal_makeup_banner_desc: "Dars qolib ketdimi? Davomatni tiklash uchun shu o'qituvchining sizga mos keladigan boshqa darsini avtomatik topib beramiz. Faqat shu hafta uchun amal qiladi — keyingi hafta jadval asl holiga qaytadi.",
     modal_current_time: 'Hozirgi dars vaqtingiz:',
     modal_room_label: 'Xona:',
     modal_choose_time: 'Yangi guruh vaqtini tanlang:',
@@ -412,15 +416,16 @@ export const translations = {
     homework_title: 'Мои домашние задания',
     homework_msg: 'Будет доступно с 14 сентября для премиум-пользователей.',
 
-    // Premium Features Copy
+    // Premium Features Copy (6 Exact Points)
     premium_title: 'INS Grades Premium',
     premium_price: '10 000 сум',
     premium_period: '/ месяц',
-    premium_feat1: '⚡ Умный поиск Make-Up: Если вы пропустили пару, умная система автоматически найдет подходящее занятие у того же преподавателя для зачета посещаемости.',
-    premium_feat2: '🔄 Гибкое расписание: Перенесите любую пару на постоянное удобное время в другой группе на весь семестр.',
-    premium_feat3: '🔔 Уведомления в Telegram: Автоматические напоминания перед каждой парой, чтобы вы никогда не опаздывали.',
-    premium_feat4: '📚 Управление курсами и Retake: Удобная отмена ненужных предметов (drop) и запись на пересдачи (retake).',
-    premium_feat5: '📝 Мои домашние задания: Удобный трекер дедлайнов и заданий (Доступно с 14 сентября).',
+    premium_feat1: '⚡ Умные отработки (Make-Up): Пропустили пару? Мы автоматически найдем подходящее занятие у того же преподавателя, чтобы восстановить посещаемость.',
+    premium_feat2: '🔄 Гибкая смена расписания: Нужно другое время? Перейдите в другую группу и сохраните новое расписание до конца семестра.',
+    premium_feat3: '📅 Автообновление расписания: Ваше расписание обновляется автоматически при любых изменениях, поэтому актуальные пары всегда под рукой.',
+    premium_feat4: '🔔 Уведомления в Telegram: Получайте автоматические напоминания перед каждой парой в Telegram, чтобы точно знать время и аудиторию.',
+    premium_feat5: '📚 Отмена курсов и Retake: Отменяйте ненужные предметы (drop) или записывайтесь на Retake и управляйте всем в одном месте.',
+    premium_feat6: '📝 Трекер домашних заданий: Все задания и дедлайны собраны в одном удобном месте. Доступно с 14 сентября.',
     premium_btn: 'Оформить Premium',
     premium_active: 'Активный план',
     premium_active_title: 'Ваша подписка Premium активна ⭐',
@@ -440,9 +445,10 @@ export const translations = {
     celebration_title: 'Поздравляем! Вы теперь Premium пользователь ⭐',
     celebration_desc: 'Все расширенные функции расписания и напоминания о парах разблокированы для вашего аккаунта.',
     celebration_item1: '⚡ Умный Make-Up: Автопоиск подходящего времени пар',
-    celebration_item2: '🔄 Настройка расписания на весь семестр',
-    celebration_item3: '🔔 Уведомления в Telegram перед каждой парой',
-    celebration_item4: '📚 Управление отменой предметов и Retake',
+    celebration_item2: '🔄 Гибкая смена расписания на весь семестр',
+    celebration_item3: '📅 Автоматическое обновление расписания',
+    celebration_item4: '🔔 Уведомления в Telegram перед каждой парой',
+    celebration_item5: '📚 Управление отменой предметов и Retake',
     celebration_btn: 'Отлично! Начать 🚀',
 
     // Profile & Premium Expiry
@@ -499,10 +505,10 @@ export const translations = {
 
     // Timetable Quick Help Banner
     timetable_help_title: 'Как работает перенос времени пар:',
-    timetable_help_makeup_label: '⚡ Разовая отработка:',
-    timetable_help_makeup_desc: 'Если вы пропустили или не можете посетить пару на этой неделе, умная система автоматически найдет предстоящий урок у того же преподавателя для зачета посещаемости. На следующей неделе расписание вернется в норму.',
-    timetable_help_perm_label: '🔄 Постоянное изменение:',
-    timetable_help_perm_desc: 'Перенесите пару в другую группу на постоянной основе до конца семестра.',
+    timetable_help_makeup_label: '⚡ Умные отработки (Make-Up):',
+    timetable_help_makeup_desc: 'Пропустили пару? Мы автоматически найдем подходящее занятие у того же преподавателя, чтобы восстановить посещаемость. На следующей неделе расписание вернется в норму.',
+    timetable_help_perm_label: '🔄 Гибкая смена расписания:',
+    timetable_help_perm_desc: 'Нужно другое время? Перейдите в другую группу и сохраните новое расписание до конца семестра.',
 
     // Timetable Schedule Change Modal
     modal_showing_alternatives: 'Другие варианты времени с проф. {professor} для {session}-пары.',
@@ -510,9 +516,9 @@ export const translations = {
     modal_perm_toggle: 'Постоянная смена',
     modal_makeup_toggle: 'Разовый Make-Up',
     modal_perm_banner_title: 'Постоянный перенос пары (На весь семестр)',
-    modal_perm_banner_desc: 'Перенесите это занятие на время другой группы на все оставшиеся недели семестра. Все варианты групп перечислены ниже.',
-    modal_makeup_banner_title: 'Разовая отработка пары (Пропустили занятие?)',
-    modal_makeup_banner_desc: 'Если вы пропустили или не можете посетить пару на этой неделе, умная система автоматически найдет предстоящее занятие у того же преподавателя в другой группе для зачета посещаемости. Действует только на эту неделю — затем расписание вернется в норму.',
+    modal_perm_banner_desc: 'Перейдите в другую группу и сохраните новое расписание до конца семестра. Все варианты групп перечислены ниже.',
+    modal_makeup_banner_title: 'Умная отработка Make-Up (Пропустили пару?)',
+    modal_makeup_banner_desc: 'Пропустили пару? Мы автоматически найдем подходящее занятие у того же преподавателя, чтобы восстановить посещаемость. Действует только на эту неделю.',
     modal_current_time: 'Ваше текущее время:',
     modal_room_label: 'Аудитория:',
     modal_choose_time: 'Выберите новое время группы:',

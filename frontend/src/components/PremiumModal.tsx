@@ -68,7 +68,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
           </div>
         )}
 
-        {/* 5 Persuasive Features */}
+        {/* 6 Persuasive Features */}
         <div className="space-y-2.5 py-1">
           <div className="flex items-start gap-2.5 text-xs text-slate-700 font-medium">
             <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
@@ -103,6 +103,13 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
               <Check className="w-3 h-3" />
             </div>
             <span>{t('premium_feat5')}</span>
+          </div>
+
+          <div className="flex items-start gap-2.5 text-xs text-slate-700 font-medium">
+            <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Check className="w-3 h-3" />
+            </div>
+            <span>{t('premium_feat6')}</span>
           </div>
         </div>
 
