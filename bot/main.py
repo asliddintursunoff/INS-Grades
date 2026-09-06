@@ -329,11 +329,21 @@ class TimetableTelegramBot:
             admin_msg = (
                 f"👑 <b>Xush kelibsiz, Administrator!</b>\n\n"
                 f"INS Grades boshqaruv botining admin panelidasiz.\n\n"
-                f"📊 <b>Statistika (Admin):</b> Moliyaviy tushumlar, oylik/kunlik xaridlar va Django Admin havolasi\n"
-                f"📢 <b>Xabar yuborish:</b> Barcha foydalanuvchilarga matn, rasm, video yoki fayl tarqatish (Broadcast)\n"
-                f"📅 <b>Dars jadvali:</b> O'z jadvalingizni ko'rish"
+                f"💡 <i>If you want to drop or retake courses, or reschedule your timetable, please open the Mini App:</i>\n\n"
+                f"✨ <b>Features:</b>\n"
+                f"• ⚡ <b>Find flexible time lessons</b>\n"
+                f"• 🔄 <b>Drop / Retake</b>\n"
+                f"• 🔔 <b>Class reminders</b>\n"
+                f"• 📝 <b>Homework reminders</b>\n"
+                f"• 🚀 <i>...more in Mini App!</i>"
             )
-            await self.send_message(chat_id, admin_msg, reply_markup=ADMIN_MENU_KEYBOARD)
+            inline_kb = {
+                "inline_keyboard": [
+                    [{"text": "📱 Open Mini App", "web_app": {"url": APP_URL}}]
+                ]
+            } if APP_URL else None
+            await self.send_message(chat_id, admin_msg, reply_markup=inline_kb)
+            await self.send_message(chat_id, "👑 Admin paneli menyusi:", reply_markup=ADMIN_MENU_KEYBOARD)
             return
 
         # Check if user already exists and is linked
@@ -346,10 +356,21 @@ class TimetableTelegramBot:
                 f"👋 Welcome back, <b>{s['full_name']}</b>!\n\n"
                 f"🎓 <b>Student ID:</b> <code>{s['student_id']}</code>\n"
                 f"👥 <b>Group:</b> {s.get('group_name', 'Assigned')}\n\n"
-                f"Tap <b>📅 Timetable</b> below to view your full weekly schedule and photo, "
-                f"or open <b>INS Grades</b> from the bottom menu bar."
+                f"💡 <i>If you want to drop or retake courses, or reschedule your timetable, please open the Mini App:</i>\n\n"
+                f"✨ <b>Features:</b>\n"
+                f"• ⚡ <b>Find flexible time lessons</b>\n"
+                f"• 🔄 <b>Drop / Retake</b>\n"
+                f"• 🔔 <b>Class reminders</b>\n"
+                f"• 📝 <b>Homework reminders</b>\n"
+                f"• 🚀 <i>...more in Mini App!</i>"
             )
-            await self.send_message(chat_id, msg, reply_markup=get_user_keyboard(tg_id))
+            inline_kb = {
+                "inline_keyboard": [
+                    [{"text": "📱 Open Mini App", "web_app": {"url": APP_URL}}]
+                ]
+            } if APP_URL else None
+            await self.send_message(chat_id, msg, reply_markup=inline_kb)
+            await self.send_message(chat_id, "Use the menu below for quick actions:", reply_markup=get_user_keyboard(tg_id))
             return
 
         # User is not registered or linked yet
@@ -358,9 +379,21 @@ class TimetableTelegramBot:
         msg = (
             f"👋 Hello, <b>{first_name}</b>!\n\n"
             f"Welcome to <b>INS Grades University Bot</b>.\n\n"
-            f"Please enter your <b>Student ID</b> (e.g. <code>U2410252</code>) to connect:"
+            f"💡 <i>If you want to drop or retake courses, or reschedule your timetable, please connect your account and open the Mini App:</i>\n\n"
+            f"✨ <b>Features:</b>\n"
+            f"• ⚡ <b>Find flexible time lessons</b>\n"
+            f"• 🔄 <b>Drop / Retake</b>\n"
+            f"• 🔔 <b>Class reminders</b>\n"
+            f"• 📝 <b>Homework reminders</b>\n"
+            f"• 🚀 <i>...more in Mini App!</i>\n\n"
+            f"👉 Please enter your <b>Student ID</b> (e.g. <code>U2410252</code>) to connect:"
         )
-        await self.send_message(chat_id, msg)
+        inline_kb = {
+            "inline_keyboard": [
+                [{"text": "📱 Open Mini App", "web_app": {"url": APP_URL}}]
+            ]
+        } if APP_URL else None
+        await self.send_message(chat_id, msg, reply_markup=inline_kb)
 
     async def handle_message(self, chat_id: int, user: dict, msg: dict):
         """Handle incoming text messages, media, and menu button clicks."""
@@ -712,11 +745,22 @@ class TimetableTelegramBot:
                     f"🎓 <b>Student ID:</b> <code>{candidate_id}</code>\n"
                     f"👥 <b>Group:</b> {chosen_group}\n"
                     f"📚 Connected to all <b>{enrolled_count}</b> classes for this semester.\n\n"
-                    f"Tap <b>📅 Timetable</b> below to view your full schedule and photo, "
-                    f"or open <b>INS Grades</b> from the bottom menu."
+                    f"💡 <i>If you want to drop or retake courses, or reschedule your timetable, please open the Mini App:</i>\n\n"
+                    f"✨ <b>Features:</b>\n"
+                    f"• ⚡ <b>Find flexible time lessons</b>\n"
+                    f"• 🔄 <b>Drop / Retake</b>\n"
+                    f"• 🔔 <b>Class reminders</b>\n"
+                    f"• 📝 <b>Homework reminders</b>\n"
+                    f"• 🚀 <i>...more in Mini App!</i>"
                 )
+                inline_kb = {
+                    "inline_keyboard": [
+                        [{"text": "📱 Open Mini App", "web_app": {"url": APP_URL}}]
+                    ]
+                } if APP_URL else None
                 await self.edit_message_text(chat_id, message_id, f"✅ Registered as <b>{chosen_group}</b>.")
-                await self.send_message(chat_id, celebration_msg, reply_markup=MAIN_MENU_KEYBOARD)
+                await self.send_message(chat_id, celebration_msg, reply_markup=inline_kb)
+                await self.send_message(chat_id, "Use the menu below for quick actions:", reply_markup=MAIN_MENU_KEYBOARD)
             else:
                 err_msg = res.get("error", "Unknown error occurred") if res else "Connection error"
                 await self.send_message(chat_id, f"❌ Registration failed: {err_msg}. Please send /start to retry.")

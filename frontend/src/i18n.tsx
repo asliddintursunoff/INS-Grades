@@ -63,16 +63,20 @@ export const translations = {
     profile_premium_plan_badge: '1 Month Plan',
     profile_premium_upgrade_btn: 'Get Premium ⭐',
 
-    // Automated Payment (Clean & Simple)
+    // Automated Payment (Maximum Clarity)
     pay_title: 'Premium Activation',
     pay_subtitle: 'Pay via Click, Payme, or any banking app',
-    pay_card_number: 'Card Number',
-    pay_card_holder: 'Receiver',
-    pay_exact_amount: 'Amount to Pay',
+    pay_step1_title: '1. Card Number',
+    pay_step1_desc: 'Copy card number and pay in any app like Click or Payme.',
+    pay_card_holder_label: 'Receiver:',
+    pay_step2_title: '2. Payment Amount',
+    pay_amount_warning: '❗️ Please pay the exact amount shown. Different people get different amounts to help identify your transaction automatically. If you pay the wrong amount, contact admin (@asliddin_tursunoff).',
+    pay_step3_title: '3. Return Here',
+    pay_step3_desc: 'After paying, return to this page. Premium activates automatically within seconds!',
     pay_copy: 'Copy',
     pay_copied: 'Copied!',
     pay_waiting: 'Waiting for payment...',
-    pay_expires_in: 'Time remaining:',
+    pay_expires_in: 'Expires in:',
     pay_success: 'Payment Verified! ⭐',
     pay_success_desc: 'Your INS Grades Premium subscription is active for 1 month.',
     pay_continue: 'Continue',
@@ -82,10 +86,6 @@ export const translations = {
     pay_cancel: 'Cancel',
     pay_initiating: 'Generating payment request...',
     pay_error_title: 'Payment Error',
-    pay_exact_warning: '❗️ Pay the exact shown amount, otherwise payment will not be accepted.',
-    pay_salt_note: '💡 The extra +{salt} UZS is your auto-verification code.',
-    pay_card_type: 'Uzcard / Humo',
-    pay_auto_hint: 'Premium activates automatically within 2-3 seconds after transfer.',
 
     // Timetable General
     all_days: 'All Days',
@@ -260,12 +260,16 @@ export const translations = {
     profile_premium_plan_badge: '1 oylik tarif',
     profile_premium_upgrade_btn: 'Premium olish ⭐',
 
-    // Automated Payment (Clean & Simple)
+    // Automated Payment (Maximum Clarity)
     pay_title: "Premium to'lovi",
     pay_subtitle: "Click, Payme yoki istalgan bank ilovasi orqali to'lang",
-    pay_card_number: 'Karta raqami',
-    pay_card_holder: 'Qabul qiluvchi',
-    pay_exact_amount: "To'lanadigan summa",
+    pay_step1_title: '1. Karta raqami',
+    pay_step1_desc: "Karta raqamini nusxalang va Click, Payme yoki istalgan bank ilovasida to'lang.",
+    pay_card_holder_label: 'Qabul qiluvchi:',
+    pay_step2_title: "2. To'lov summasi",
+    pay_amount_warning: "❗️ Iltimos, aynan ko'rsatilgan summani to'lang. Har bir kishiga turli xil summa beriladi — bu to'lovingizni tizim avtomatik aniqlashi uchun kerak. Agar adashib boshqa summa to'lasangiz, adminga (@asliddin_tursunoff) murojaat qiling.",
+    pay_step3_title: '3. Shu yerga qayting',
+    pay_step3_desc: "To'lovni amalga oshirgach, shu oynaga qayting. Premium bir necha soniyada avtomatik yoqiladi!",
     pay_copy: 'Nusxalash',
     pay_copied: 'Nusxa olindi!',
     pay_waiting: "To'lov kutilmoqda...",
@@ -279,10 +283,6 @@ export const translations = {
     pay_cancel: 'Bekor qilish',
     pay_initiating: "To'lov shakllantirilmoqda...",
     pay_error_title: "To'lov xatoligi",
-    pay_exact_warning: "❗️ Ko'rsatilgan summani aynan to'lang, aks holda to'lov qabul qilinmaydi.",
-    pay_salt_note: "💡 Qo'shimcha +{salt} so'm — to'lovni avtomatik aniqlash kodi.",
-    pay_card_type: 'Uzcard / Humo',
-    pay_auto_hint: "To'lov qilingach, hisobingiz 2-3 soniyada avtomatik Premium bo'ladi.",
 
     // Timetable General
     all_days: 'Barcha kunlar',
@@ -457,12 +457,16 @@ export const translations = {
     profile_premium_plan_badge: 'Тариф на 1 месяц',
     profile_premium_upgrade_btn: 'Получить Premium ⭐',
 
-    // Automated Payment (Clean & Simple)
+    // Automated Payment (Maximum Clarity)
     pay_title: 'Оплата Premium',
     pay_subtitle: 'Оплатите через Click, Payme или любой банк',
-    pay_card_number: 'Номер карты',
-    pay_card_holder: 'Получатель',
-    pay_exact_amount: 'Сумма к оплате',
+    pay_step1_title: '1. Номер карты',
+    pay_step1_desc: 'Скопируйте номер карты и оплатите через Click, Payme или любой банк.',
+    pay_card_holder_label: 'Получатель:',
+    pay_step2_title: '2. Сумма к оплате',
+    pay_amount_warning: '❗️ Пожалуйста, переводите точную указанную сумму. Каждому студенту даётся разная сумма для автоматического определения платежа. Если вы оплатили неверную сумму, свяжитесь с администратором (@asliddin_tursunoff).',
+    pay_step3_title: '3. Вернитесь сюда',
+    pay_step3_desc: 'После совершения платежа вернитесь сюда. Premium включится автоматически за считанные секунды!',
     pay_copy: 'Скопировать',
     pay_copied: 'Скопировано!',
     pay_waiting: 'Ожидание оплаты...',
@@ -476,10 +480,6 @@ export const translations = {
     pay_cancel: 'Отмена',
     pay_initiating: 'Формирование платежа...',
     pay_error_title: 'Ошибка оплаты',
-    pay_exact_warning: '❗️ Оплачивайте точную указанную сумму, иначе платёж не будет принят.',
-    pay_salt_note: '💡 Добавочные +{salt} сум — код авто-определения платежа.',
-    pay_card_type: 'Uzcard / Humo',
-    pay_auto_hint: 'После перевода Premium включится автоматически за 2-3 секунды.',
 
     // Timetable General
     all_days: 'Все дни',
