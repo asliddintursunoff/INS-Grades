@@ -63,8 +63,14 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                 {t('premium_title')}
               </h3>
               <div className="text-xs text-slate-500 font-semibold">
-                <span className="text-slate-900 font-black">{t('premium_price')}</span>
-                <span> {t('premium_period')}</span>
+                {isPremium ? (
+                  <span className="text-emerald-600 font-bold">✓ {t('premium_active')}</span>
+                ) : (
+                  <>
+                    <span className="text-slate-900 font-black">{t('premium_price')}</span>
+                    <span> {t('premium_period')}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -110,13 +116,23 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
 
         {/* Actions */}
         <div className="pt-2 space-y-2.5">
-          <button
-            onClick={() => setShowPaymentModal(true)}
-            className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
-          >
-            <span>{t('premium_btn')}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          {isPremium ? (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="w-full py-2.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-xs shadow-2xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+            >
+              <span>{t('premium_extend_btn')}</span>
+              <ArrowRight className="w-4 h-4 text-amber-700" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+            >
+              <span>{t('premium_btn')}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
 
           <div className="flex items-center justify-between text-xs pt-1">
             <button

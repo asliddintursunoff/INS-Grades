@@ -125,10 +125,10 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-blue-600" />
-            Enrolled Courses & Academic Load
+            {t('enrolled_courses_title')}
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-xl leading-relaxed">
-            Manage your registered subjects. Dropping a course cancels upcoming assignment deadlines; retaking re-opens open coursework and adds it back to your timetable.
+            {t('enrolled_courses_desc')}
           </p>
         </div>
 
@@ -175,39 +175,31 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
         </div>
       )}
 
-      {/* Helpful Hint */}
-      <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3.5 flex items-start gap-3 text-xs text-blue-900">
-        <BookOpen className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <span className="font-semibold text-blue-950">Course Management:</span> View your enrolled subjects, drop courses, or re-enroll. To change your class times or switch sections (one-time make-up or permanent), use the <strong>Timetable</strong> tab.
-        </div>
-      </div>
-
       {/* Active Classes */}
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-slate-500 px-1 font-medium">
-          <span className="font-bold text-slate-700">Currently Enrolled Courses:</span>
+          <span className="font-bold text-slate-700">{t('currently_enrolled')}</span>
           <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-semibold">
-            {activeClasses.length} courses
+            {activeClasses.length} {t('courses_count')}
           </span>
         </div>
 
         {loading ? (
           <div className="py-12 text-center text-xs text-slate-400">
-            Loading enrolled courses...
+            {t('loading_courses')}
           </div>
         ) : activeClasses.length === 0 ? (
           <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center space-y-3">
             <BookOpen className="w-8 h-8 text-slate-300 mx-auto" />
             <div className="text-xs text-slate-500">
-              No active courses found. You can add or retake courses anytime.
+              {t('no_active_courses')}
             </div>
             <button
               onClick={() => setShowRetakeModal(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs hover:bg-blue-100 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Register Retake Course
+              {t('register_retake')}
             </button>
           </div>
         ) : (
@@ -229,14 +221,14 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
                     </div>
 
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                      Active
+                      {t('active_badge')}
                     </span>
                   </div>
 
                   <div className="text-xs text-slate-600 mb-3.5 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span>
-                      Professor: <strong className="text-slate-800">{c.professor}</strong>
+                      {t('professor_label')} <strong className="text-slate-800">{c.professor}</strong>
                     </span>
                   </div>
                 </div>
@@ -272,10 +264,10 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
           <div className="flex items-center justify-between text-xs font-bold text-slate-600 px-1">
             <div className="flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-              <span>Dropped Courses:</span>
+              <span>{t('retake_courses')}:</span>
             </div>
             <span className="text-slate-400 font-normal">
-              {droppedClasses.length} dropped
+              {droppedClasses.length} {t('dropped_badge').toLowerCase()}
             </span>
           </div>
 
@@ -297,13 +289,13 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
                     </div>
 
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 shrink-0">
-                      Dropped
+                      {t('dropped_badge')}
                     </span>
                   </div>
 
                   <div className="text-xs text-slate-500 mb-3 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>Professor: {c.professor}</span>
+                    <span>{t('professor_label')} {c.professor}</span>
                   </div>
                 </div>
 
@@ -321,7 +313,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>
-                      {actionLoadingId === c.class_id ? 'Re-enrolling...' : t('reenroll_course')}
+                      {actionLoadingId === c.class_id ? '...' : t('reenroll_course')}
                     </span>
                   </button>
                 </div>
@@ -331,7 +323,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
         </div>
       )}
 
-      {/* Confirmation Dialog for Dropping Course (Reliable alternative to window.confirm) */}
+      {/* Confirmation Dialog for Dropping Course */}
       {dropConfirmClass && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
@@ -341,7 +333,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
               </div>
               <div>
                 <h4 className="text-sm font-bold text-slate-900">
-                  Drop Course Confirmation
+                  {t('drop_confirm_title')}
                 </h4>
                 <p className="text-xs text-slate-500">
                   {dropConfirmClass.subject_full} ({dropConfirmClass.subject_short})
@@ -350,7 +342,7 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Are you sure you want to drop this course? Upcoming assignment deadlines will be paused, and this class will be removed from your timetable. You can re-enroll or retake it at any time.
+              {t('drop_confirm_desc')}
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -358,13 +350,13 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
                 onClick={() => setDropConfirmClass(null)}
                 className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
               >
-                Cancel
+                {t('cancel_btn')}
               </button>
               <button
                 onClick={handleConfirmDrop}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-xs"
               >
-                Yes, Drop Course
+                {t('confirm_btn')}
               </button>
             </div>
           </div>

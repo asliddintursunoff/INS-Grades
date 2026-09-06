@@ -52,21 +52,48 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
                 {isPremium ? (
                   <span className="text-emerald-600 font-bold">✓ {t('premium_active')}</span>
                 ) : (
-                  <span>Free Plan</span>
+                  <span>{t('plan_free')}</span>
                 )}
               </div>
             </div>
           </div>
 
           <div className="text-right">
-            <div className="text-base font-black text-slate-900">
-              {t('premium_price')}
-            </div>
-            <div className="text-[11px] text-slate-400 font-normal">
-              {t('premium_period')}
-            </div>
+            {isPremium ? (
+              <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 text-xs font-black shadow-2xs border border-amber-300">
+                <span>PREMIUM</span>
+                <span>⭐</span>
+              </div>
+            ) : (
+              <>
+                <div className="text-base font-black text-slate-900">
+                  {t('premium_price')}
+                </div>
+                <div className="text-[11px] text-slate-400 font-normal">
+                  {t('premium_period')}
+                </div>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Active Premium Banner if already subscribed */}
+        {isPremium && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 text-left space-y-1">
+            <div className="flex items-center gap-1.5 text-emerald-800 font-bold text-xs">
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>{t('premium_active_title')}</span>
+            </div>
+            <p className="text-[11px] text-emerald-700 leading-relaxed">
+              {t('premium_active_desc')}
+            </p>
+            {student.premium_expires_at && (
+              <div className="text-[11px] font-bold text-emerald-900 pt-1">
+                {t('premium_expires_label')} {new Date(student.premium_expires_at).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 3 Simple Features */}
         <div className="space-y-3 py-1">
@@ -100,13 +127,23 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
 
         {/* Action Button */}
         <div className="pt-2 space-y-3">
-          <button
-            onClick={() => setShowPaymentModal(true)}
-            className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
-          >
-            <span>{t('premium_btn')}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          {isPremium ? (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="w-full py-2.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-xs shadow-2xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+            >
+              <span>{t('premium_extend_btn')}</span>
+              <ArrowRight className="w-4 h-4 text-amber-700" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+            >
+              <span>{t('premium_btn')}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
 
           <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
             <a
@@ -115,7 +152,7 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
               rel="noreferrer"
               className="text-slate-500 hover:text-blue-600 transition-colors"
             >
-              Savollar bormi? @asliddin_tursunoff
+              {t('contact_support')}
             </a>
 
             {/* Test switcher */}

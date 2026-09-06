@@ -364,6 +364,9 @@ def demo_students(request):
             "group_name": group_name,
             "year_of_study": s.year_of_study or 2,
             "timetable_image_url": img_url,
+            "is_premium": getattr(s, 'has_premium', False),
+            "plan": "premium" if getattr(s, 'has_premium', False) else "free",
+            "premium_expires_at": s.premium_expires_at.isoformat() if getattr(s, 'premium_expires_at', None) else None,
         })
 
     return Response({
@@ -405,6 +408,9 @@ def auth_me(request, telegram_id):
             "telegram_id": student.telegram_id,
             "telegram_username": student.telegram_username,
             "timetable_image_url": img_url,
+            "is_premium": getattr(student, 'has_premium', False),
+            "plan": "premium" if getattr(student, 'has_premium', False) else "free",
+            "premium_expires_at": student.premium_expires_at.isoformat() if getattr(student, 'premium_expires_at', None) else None,
         }
     })
 
@@ -449,11 +455,19 @@ def auth_link(request):
             "full_name": student.full_name,
             "group_name": student.group.group_name if student.group else "",
             "year_of_study": student.year_of_study or 2,
+            "telegram_id": student.telegram_id,
+            "telegram_username": student.telegram_username,
+            "is_premium": getattr(student, 'has_premium', False),
+            "plan": "premium" if getattr(student, 'has_premium', False) else "free",
+            "premium_expires_at": student.premium_expires_at.isoformat() if getattr(student, 'premium_expires_at', None) else None,
         },
         "student_id": student.student_id,
         "full_name": student.full_name,
         "group_name": student.group.group_name if student.group else "",
         "year_of_study": student.year_of_study or 2,
+        "is_premium": getattr(student, 'has_premium', False),
+        "plan": "premium" if getattr(student, 'has_premium', False) else "free",
+        "premium_expires_at": student.premium_expires_at.isoformat() if getattr(student, 'premium_expires_at', None) else None,
     })
 
 

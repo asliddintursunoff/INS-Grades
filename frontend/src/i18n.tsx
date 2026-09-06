@@ -29,6 +29,10 @@ export const translations = {
     premium_feat3: 'Telegram notifications before each class',
     premium_btn: 'Get Premium',
     premium_active: 'Active Plan',
+    premium_active_title: 'Your Premium Subscription is Active ⭐',
+    premium_active_desc: 'All features including schedule adjustments, make-ups, drops/retakes, and automated reminders are unlocked.',
+    premium_expires_label: 'Valid until:',
+    premium_extend_btn: 'Extend Subscription (+30 days)',
     premium_demo_free: 'Switch to Free (Test)',
     premium_demo_prem: 'Activate Premium (Test)',
     premium_only_msg: 'This feature is available for Premium users only.',
@@ -37,23 +41,31 @@ export const translations = {
     premium_only_drop: 'Dropping courses is for Premium users only.',
     premium_only_notif: 'Telegram reminders are for Premium users only.',
     premium_close: 'Close',
+    contact_support: 'Questions? @asliddin_tursunoff',
 
     // Automated Payment
     pay_title: 'Premium Activation',
+    pay_subtitle: 'Automated Instant Verification',
     pay_exact_amount: 'Exact Amount to Transfer',
-    pay_salt_note: 'Important: Transfer this EXACT amount. The extra small sum serves as your unique verification code!',
+    pay_salt_title: 'Why is the amount slightly different from 10,000 UZS?',
+    pay_salt_desc: 'To automatically verify your payment in seconds without manual receipt review, a temporary unique verification code is assigned to your transaction.',
+    pay_strict_warning_title: 'CRITICAL: EXACT AMOUNT REQUIRED!',
+    pay_strict_warning_desc: 'Transfer the EXACT amount shown above! If you transfer a different amount (e.g. rounded to 10,000 UZS), the system CANNOT detect your payment and IT WILL NOT BE ACCEPTED (PREMIUM WILL NOT BE ACTIVATED)!',
     pay_card_number: 'Bank Card Number',
     pay_card_holder: 'Card Holder',
+    pay_copy: 'Copy',
     pay_copied: 'Copied!',
-    pay_waiting: 'Waiting for payment...',
+    pay_waiting: 'Waiting for payment confirmation...',
     pay_expires_in: 'Session expires in:',
     pay_success: 'Payment Verified! ⭐',
     pay_success_desc: 'Your INS Grades Premium subscription is active for 30 days.',
+    pay_continue: 'Continue',
     pay_timeout: 'Payment Session Expired',
-    pay_timeout_desc: 'If you already sent the money, contact the administrator or try again.',
+    pay_timeout_desc: 'If you already sent the transfer, please contact the administrator or try again.',
     pay_try_again: 'Try Again',
     pay_cancel: 'Cancel',
     pay_initiating: 'Generating payment request...',
+    pay_error_title: 'Payment Error',
 
     // Timetable
     all_days: 'All Days',
@@ -81,18 +93,44 @@ export const translations = {
     reenroll_course: 'Re-enroll',
     available_retakes: 'Available Retake Courses',
     add_retake: 'Add Retake Course',
+    enrolled_courses_title: 'Enrolled Courses & Academic Load',
+    enrolled_courses_desc: 'Manage your registered subjects. Dropping a course cancels upcoming deadlines; retaking adds it back to your timetable.',
+    currently_enrolled: 'Currently Enrolled Courses:',
+    courses_count: 'courses',
+    loading_courses: 'Loading enrolled courses...',
+    no_active_courses: 'No active courses found. You can add or retake courses anytime.',
+    register_retake: 'Register Retake Course',
+    active_badge: 'Active',
+    dropped_badge: 'Dropped',
+    professor_label: 'Professor:',
+    drop_confirm_title: 'Confirm Course Drop',
+    drop_confirm_desc: 'Are you sure you want to drop this course?',
+    confirm_btn: 'Confirm',
+    cancel_btn: 'Cancel',
 
     // Settings
     notif_title: 'Telegram Class Reminders',
     notif_toggle: 'Receive Class Reminders',
     notif_active: 'Active: Bot sends reminders before each class',
     notif_disabled: 'Disabled: Alerts muted',
+    notif_desc: 'The university bot will automatically dispatch class reminder notifications to your linked Telegram account before each lecture starts.',
     reminder_timing: 'Reminder Timing (Minutes Before):',
     minutes: 'min',
+    settings_saved: 'Notification settings saved successfully!',
     telegram_link: 'Telegram Account Link',
+    tg_link_status: 'Telegram Link Status',
+    tg_link_account: 'Account Linked:',
+    tg_link_instruction: 'When starting the bot, send your Student ID. If not found, contact administrator:',
     connected: 'Connected',
-    pending: 'Pending',
+    pending: 'Not Linked',
     academic_profile: 'Official Academic Profile',
+    profile_info_desc: 'Personal information, student ID, and primary academic group are managed centrally by the university registrar.',
+    student_id_label: 'Student ID',
+    full_name_label: 'Full Name',
+    group_label: 'Primary Academic Group',
+    standing_label: 'Academic Standing',
+    year_student_format: 'Year {year} Student',
+    verified_record: 'Verified Registrar Record',
   },
   uz: {
     // Navigation
@@ -120,6 +158,10 @@ export const translations = {
     premium_feat3: 'Darsdan oldin Telegram botdan avtomatik eslatmalar',
     premium_btn: 'Premium olish',
     premium_active: 'Faol Tarif',
+    premium_active_title: 'Sizda Premium tarif faol ⭐',
+    premium_active_desc: 'Barcha imkoniyatlar (dars vaqtini o\'zgartirish, drop/retake, bot eslatmalari) cheklovlarsiz ishlamoqda.',
+    premium_expires_label: 'Amal qilish muddati:',
+    premium_extend_btn: 'Obunani uzaytirish (+30 kun)',
     premium_demo_free: "Free tarifga o'tish (Test)",
     premium_demo_prem: 'Premium faollashtirish (Test)',
     premium_only_msg: 'Bu funksiya faqat Premium foydalanuvchilar uchun!',
@@ -128,23 +170,31 @@ export const translations = {
     premium_only_drop: 'Fanni bekor qilish faqat Premium foydalanuvchilar uchun.',
     premium_only_notif: 'Telegram eslatmalarini yoqish faqat Premium foydalanuvchilar uchun.',
     premium_close: 'Yopish',
+    contact_support: 'Savollar bormi? @asliddin_tursunoff',
 
     // Automated Payment
     pay_title: "Premium to'lovi",
+    pay_subtitle: 'Avtomatik tezkor tekshiruv',
     pay_exact_amount: "O'tkaziladigan aniq summa",
-    pay_salt_note: "Muhim: AYNAN shu summani o'tkazing! Qo'shimcha bir necha so'm to'lovni avtomatik aniqlash uchun kerak.",
+    pay_salt_title: "Nega summa 10 000 so'mdan farq qiladi?",
+    pay_salt_desc: "Tizim to'lovingizni soniyalar ichida avtomatik tanib olishi va admin tekshiruvisiz Premium yoqishi uchun sizga unikal identifikator kodi biriktirildi.",
+    pay_strict_warning_title: "❗️ DIQQAT: QAT'IY TALAB!",
+    pay_strict_warning_desc: "Aynan ko'rsatilgan summani to'lang! Agar boshqacha summa (masalan, yaxlitlab 10 000 so'm) to'lasangiz, tizim to'lovingizni aniqlay olmaydi va QABUL QILINMAYDI (PREMIUM YOQILMAYDI)!",
     pay_card_number: 'Karta raqami',
     pay_card_holder: 'Qabul qiluvchi',
+    pay_copy: 'Nusxalash',
     pay_copied: 'Nusxa olindi!',
     pay_waiting: "To'lov kutilmoqda...",
     pay_expires_in: "To'lov vaqti:",
     pay_success: "To'lov qabul qilindi! ⭐",
     pay_success_desc: 'Sizning hisobingiz 30 kunga Premium qilindi.',
+    pay_continue: 'Davom etish',
     pay_timeout: "To'lov vaqti tugadi",
     pay_timeout_desc: "Agar to'lov qilgan bo'lsangiz, administratorga murojaat qiling yoki qayta urinib ko'ring.",
     pay_try_again: 'Qayta urinish',
     pay_cancel: 'Bekor qilish',
     pay_initiating: "To'lov shakllantirilmoqda...",
+    pay_error_title: "To'lov xatoligi",
 
     // Timetable
     all_days: 'Barcha kunlar',
@@ -172,18 +222,44 @@ export const translations = {
     reenroll_course: 'Qayta tiklash',
     available_retakes: 'Mavjud retake fanlar',
     add_retake: "Retake fan qo'shish",
+    enrolled_courses_title: 'O\'qiyotgan fanlaringiz va yuklama',
+    enrolled_courses_desc: 'Ro\'yxatdan o\'tgan fanlaringizni boshqaring. Fanni bekor qilish (drop) vazifalarni bekor qiladi, retake olish uni yana jadvalingizga qaytaradi.',
+    currently_enrolled: 'Hozirda ro\'yxatdan o\'tgan fanlar:',
+    courses_count: 'ta fan',
+    loading_courses: 'Fanlar yuklanmoqda...',
+    no_active_courses: 'Hech qanday faol fan topilmadi. Istalgan vaqtda fan qo\'shishingiz mumkin.',
+    register_retake: 'Retake fan olish',
+    active_badge: 'Faol',
+    dropped_badge: 'Bekor qilingan',
+    professor_label: 'O\'qituvchi:',
+    drop_confirm_title: 'Fanni bekor qilishni tasdiqlang',
+    drop_confirm_desc: 'Haqiqatan ham ushbu fanni bekor qilmoqchimisiz?',
+    confirm_btn: 'Tasdiqlash',
+    cancel_btn: 'Bekor qilish',
 
     // Settings
     notif_title: 'Telegram dars eslatmalari',
     notif_toggle: 'Dars eslatmalarini olish',
     notif_active: 'Faol: Bot darsdan oldin xabarnoma yuboradi',
     notif_disabled: "O'chirilgan: Xabarlar kelmaydi",
+    notif_desc: 'Universitet boti har bir dars boshlanishidan oldin bog\'langan Telegram profilingizga avtomatik eslatma xabarnomasi yuboradi.',
     reminder_timing: 'Eslatma vaqti (darsdan necha daqiqa oldin):',
     minutes: 'daq',
+    settings_saved: 'Eslatma sozlamalari muvaffaqiyatli saqlandi!',
     telegram_link: 'Telegram profil',
+    tg_link_status: 'Telegram ulanish holati',
+    tg_link_account: 'Ulangan profil:',
+    tg_link_instruction: 'Botga kirganingizda talaba ID raqamingizni yuboring. Agar topilmasa, adminga murojaat qiling:',
     connected: 'Ulangan',
     pending: 'Ulanmagan',
     academic_profile: 'Talaba ma\'lumotlari',
+    profile_info_desc: 'Shaxsiy ma\'lumotlar, talaba ID va asosiy akademik guruh universitet registratori tomonidan boshqariladi.',
+    student_id_label: 'Talaba ID',
+    full_name_label: 'F.I.SH.',
+    group_label: 'Asosiy akademik guruh',
+    standing_label: 'Kursi',
+    year_student_format: '{year}-kurs talabasi',
+    verified_record: 'Registrator tomonidan tasdiqlangan',
   },
   ru: {
     // Navigation
@@ -211,6 +287,10 @@ export const translations = {
     premium_feat3: 'Telegram-уведомления перед каждым занятием',
     premium_btn: 'Оформить Premium',
     premium_active: 'Активный план',
+    premium_active_title: 'Ваша подписка Premium активна ⭐',
+    premium_active_desc: 'Все функции (изменение времени пар, drop/retake, уведомления в Telegram) работают без ограничений.',
+    premium_expires_label: 'Действует до:',
+    premium_extend_btn: 'Продлить подписку (+30 дней)',
     premium_demo_free: 'Перейти на Free (Тест)',
     premium_demo_prem: 'Активировать Premium (Тест)',
     premium_only_msg: 'Эта функция доступна только для пользователей Premium!',
@@ -219,23 +299,31 @@ export const translations = {
     premium_only_drop: 'Отмена предмета доступна только с Premium.',
     premium_only_notif: 'Уведомления доступны только с Premium.',
     premium_close: 'Закрыть',
+    contact_support: 'Есть вопросы? @asliddin_tursunoff',
 
     // Automated Payment
     pay_title: 'Оплата Premium',
+    pay_subtitle: 'Мгновенная автоматическая проверка',
     pay_exact_amount: 'Точная сумма к переводу',
-    pay_salt_note: 'Важно: переведите ИМЕННО эту сумму! Небольшая разница служит уникальным кодом вашей оплаты.',
+    pay_salt_title: 'Почему сумма немного отличается от 10 000 сум?',
+    pay_salt_desc: 'Чтобы система автоматически и мгновенно распознала ваш перевод без участия администратора, вам назначен уникальный проверочный код.',
+    pay_strict_warning_title: '❗️ ВНИМАНИЕ: СТРОГОЕ ТРЕБОВАНИЕ!',
+    pay_strict_warning_desc: 'Переведите ТОЧНУЮ сумму, указанную выше! Если вы переведете другую сумму (например, ровно 10 000 сум), система НЕ СМОЖЕТ определить ваш платеж и ОН НЕ БУДЕТ ПРИНЯТ (PREMIUM НЕ ВКЛЮЧИТСЯ)!',
     pay_card_number: 'Номер карты',
     pay_card_holder: 'Получатель',
+    pay_copy: 'Скопировать',
     pay_copied: 'Скопировано!',
     pay_waiting: 'Ожидание оплаты...',
     pay_expires_in: 'Время на оплату:',
     pay_success: 'Оплата подтверждена! ⭐',
     pay_success_desc: 'Ваша подписка INS Grades Premium активирована на 30 дней.',
+    pay_continue: 'Продолжить',
     pay_timeout: 'Время сессии истекло',
     pay_timeout_desc: 'Если вы уже перевели деньги, свяжитесь с администратором или попробуйте снова.',
     pay_try_again: 'Попробовать снова',
     pay_cancel: 'Отмена',
     pay_initiating: 'Формирование платежа...',
+    pay_error_title: 'Ошибка оплаты',
 
     // Timetable
     all_days: 'Все дни',
@@ -263,18 +351,44 @@ export const translations = {
     reenroll_course: 'Восстановить',
     available_retakes: 'Доступные Retake курсы',
     add_retake: 'Добавить Retake курс',
+    enrolled_courses_title: 'Изучаемые предметы и академическая нагрузка',
+    enrolled_courses_desc: 'Управляйте вашими курсами. Отмена курса (drop) отменяет дедлайны; повторный курс (retake) возвращает его в расписание.',
+    currently_enrolled: 'Текущие предметы:',
+    courses_count: 'курсов',
+    loading_courses: 'Загрузка курсов...',
+    no_active_courses: 'Активных предметов не найдено. Вы можете добавить Retake в любое время.',
+    register_retake: 'Записаться на Retake',
+    active_badge: 'Активен',
+    dropped_badge: 'Отменен',
+    professor_label: 'Преподаватель:',
+    drop_confirm_title: 'Подтвердите отмену курса',
+    drop_confirm_desc: 'Вы уверены, что хотите отменить этот предмет?',
+    confirm_btn: 'Подтвердить',
+    cancel_btn: 'Отмена',
 
     // Settings
     notif_title: 'Telegram-напоминания',
     notif_toggle: 'Получать напоминания о парах',
     notif_active: 'Активно: Бот отправляет уведомления перед парами',
     notif_disabled: 'Отключено: Уведомления не приходят',
+    notif_desc: 'Университетский бот автоматически отправляет уведомления о предстоящих парах в ваш привязанный Telegram.',
     reminder_timing: 'Время напоминания (за сколько минут до пары):',
     minutes: 'мин',
+    settings_saved: 'Настройки уведомлений успешно сохранены!',
     telegram_link: 'Telegram аккаунт',
+    tg_link_status: 'Статус привязки Telegram',
+    tg_link_account: 'Привязанный аккаунт:',
+    tg_link_instruction: 'При запуске бота отправьте ваш Student ID. Если не найден, обратитесь к администратору:',
     connected: 'Подключен',
     pending: 'Не привязан',
     academic_profile: 'Данные студента',
+    profile_info_desc: 'Личные данные, ID студента и академическая группа регулируются деканатом университета.',
+    student_id_label: 'Student ID',
+    full_name_label: 'Ф.И.О.',
+    group_label: 'Основная группа',
+    standing_label: 'Курс',
+    year_student_format: 'Студент {year}-курса',
+    verified_record: 'Подтверждено деканатом',
   }
 };
 
@@ -283,7 +397,7 @@ type Translations = typeof translations.en;
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: keyof Translations) => string;
+  t: (key: keyof Translations, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -303,9 +417,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('ins_lang', lang);
   };
 
-  const t = (key: keyof Translations): string => {
+  const t = (key: keyof Translations, params?: Record<string, string | number>): string => {
     const currentDict = translations[language] || translations.en;
-    return (currentDict as any)[key] || translations.en[key] || String(key);
+    let text = (currentDict as any)[key] || translations.en[key] || String(key);
+    if (params) {
+      Object.entries(params).forEach(([paramKey, val]) => {
+        text = text.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(val));
+      });
+    }
+    return text;
   };
 
   return (

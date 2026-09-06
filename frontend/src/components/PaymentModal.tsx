@@ -10,7 +10,9 @@ import {
   CreditCard, 
   ShieldCheck, 
   RefreshCw,
-  ArrowRight
+  ArrowRight,
+  HelpCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { apiCall } from '../api';
 import { useLanguage } from '../i18n';
@@ -230,7 +232,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 {t('pay_title')}
               </h3>
               <div className="text-[11px] text-slate-500 font-medium">
-                P2P Automated Verification
+                {t('pay_subtitle')}
               </div>
             </div>
           </div>
@@ -260,7 +262,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <AlertCircle className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-sm font-bold text-slate-900">Error</h4>
+              <h4 className="text-sm font-bold text-slate-900">{t('pay_error_title')}</h4>
               <p className="text-xs text-slate-600">{error}</p>
             </div>
             <button
@@ -274,7 +276,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
         {/* State 3: Active Pending Payment */}
         {!loading && !error && paymentData && paymentStatus === 'pending' && (
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             
             {/* Countdown Banner */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-950 text-xs">
@@ -306,11 +308,28 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   {copiedAmount ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               </div>
+            </div>
 
-              {/* Salt Note Warning */}
-              <div className="text-[10.5px] text-slate-600 font-medium leading-relaxed bg-white/80 p-2.5 rounded-xl border border-blue-100 text-left">
-                ⚠️ <strong>{t('pay_salt_note')}</strong>
+            {/* CRITICAL WARNING: Red Alert Box with Red Exclamation Mark */}
+            <div className="bg-rose-50 border-2 border-rose-500/90 rounded-2xl p-3.5 space-y-2 text-left shadow-xs">
+              <div className="flex items-center gap-2 text-rose-700 font-black text-xs uppercase tracking-wide">
+                <span className="text-base animate-bounce">❗️</span>
+                <span>{t('pay_strict_warning_title')}</span>
               </div>
+              <p className="text-[11.5px] text-rose-950 font-bold leading-relaxed">
+                {t('pay_strict_warning_desc')}
+              </p>
+            </div>
+
+            {/* Detailed Explanation of the Dynamic Salt Amount */}
+            <div className="bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 space-y-1 text-left">
+              <div className="text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
+                <HelpCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>{t('pay_salt_title')}</span>
+              </div>
+              <p className="text-[10.5px] text-blue-800 leading-relaxed">
+                {t('pay_salt_desc')}
+              </p>
             </div>
 
             {/* Card Details Card */}
@@ -330,7 +349,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
                 >
                   {copiedCard ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedCard ? t('pay_copied') : 'Copy'}</span>
+                  <span>{copiedCard ? t('pay_copied') : t('pay_copy')}</span>
                 </button>
               </div>
 
@@ -384,7 +403,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 onClick={onClose}
                 className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
               >
-                <span>Davom etish</span>
+                <span>{t('pay_continue')}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

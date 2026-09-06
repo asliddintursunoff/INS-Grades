@@ -49,7 +49,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setSaving(true);
     try {
       await apiCall(`/api/students/${student.student_id}/notification-settings/`, 'PATCH', updated);
-      setSavedMessage('Notification settings saved successfully!');
+      setSavedMessage(t('settings_saved'));
       setTimeout(() => setSavedMessage(null), 2500);
     } catch (err: any) {
       console.error(err);
@@ -70,7 +70,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             {t('notif_title')}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            The university bot will automatically dispatch class reminder notifications to your linked Telegram account before each lecture starts.
+            {t('notif_desc')}
           </p>
         </div>
 
@@ -156,7 +156,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <UserCheck className="w-5 h-5 text-emerald-600 shrink-0" />
               <div>
                 <div className="font-bold text-emerald-900">
-                  Account Linked: @{student.telegram_username || student.telegram_id}
+                  {t('tg_link_account')} @{student.telegram_username || student.telegram_id}
                 </div>
                 <div className="text-[11px] text-emerald-700">
                   Telegram ID: {student.telegram_id}
@@ -170,14 +170,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         ) : (
           <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs space-y-2">
             <div className="flex items-center justify-between">
-              <div className="font-bold text-amber-900">Telegram Link Status</div>
+              <div className="font-bold text-amber-900">{t('tg_link_status')}</div>
               <span className="px-2.5 py-1 rounded-md bg-amber-200/60 text-amber-900 font-bold text-[11px]">
                 {t('pending')}
               </span>
             </div>
             <div className="text-[11px] text-amber-800">
-              When starting the bot, send your Student ID: <strong>{student.student_id}</strong>.
-              If your ID is not found in the database, contact administrator: <strong>@asliddin_tursunoff</strong>.
+              {t('tg_link_instruction')} <strong>@asliddin_tursunoff</strong> (ID: {student.student_id}).
             </div>
           </div>
         )}
@@ -192,18 +191,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </h3>
           <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            Verified Registrar Record
+            {t('verified_record')}
           </span>
         </div>
 
         <p className="text-xs text-slate-500">
-          Personal information, student ID, and primary academic group are managed centrally by the university registrar and cannot be modified directly in the student portal.
+          {t('profile_info_desc')}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
             <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-              Student ID
+              {t('student_id_label')}
             </span>
             <span className="text-xs font-bold text-slate-800 mt-0.5 block font-mono">
               {student.student_id}
@@ -212,7 +211,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
             <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-              Full Name
+              {t('full_name_label')}
             </span>
             <span className="text-xs font-bold text-slate-800 mt-0.5 block">
               {student.full_name}
@@ -221,7 +220,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
             <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-              Primary Academic Group
+              {t('group_label')}
             </span>
             <span className="text-xs font-bold text-slate-800 mt-0.5 block">
               {student.group_name}
@@ -230,10 +229,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
             <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-              Academic Standing
+              {t('standing_label')}
             </span>
             <span className="text-xs font-bold text-slate-800 mt-0.5 block">
-              Year {student.year_of_study || 2} Student
+              {t('year_student_format', { year: student.year_of_study || 2 })}
             </span>
           </div>
         </div>
