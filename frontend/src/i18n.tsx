@@ -82,7 +82,8 @@ export const translations = {
     pay_cancel: 'Cancel',
     pay_initiating: 'Generating payment request...',
     pay_error_title: 'Payment Error',
-    pay_salt_note: '💡 Why {amount} UZS? The extra +{salt} UZS is your automated detection code. Please transfer the exact amount without rounding.',
+    pay_exact_warning: '❗️ Pay the exact shown amount, otherwise payment will not be accepted.',
+    pay_salt_note: '💡 The extra +{salt} UZS is your auto-verification code.',
     pay_card_type: 'Uzcard / Humo',
     pay_auto_hint: 'Premium activates automatically within 2-3 seconds after transfer.',
 
@@ -278,7 +279,8 @@ export const translations = {
     pay_cancel: 'Bekor qilish',
     pay_initiating: "To'lov shakllantirilmoqda...",
     pay_error_title: "To'lov xatoligi",
-    pay_salt_note: "💡 Nega {amount} so'm? Qo'shilgan +{salt} so'm — to'lovni avtomatik aniqlash kodi. Iltimos, summani yaxlitlamasdan (aynan shunday) to'lang.",
+    pay_exact_warning: "❗️ Ko'rsatilgan summani aynan to'lang, aks holda to'lov qabul qilinmaydi.",
+    pay_salt_note: "💡 Qo'shimcha +{salt} so'm — to'lovni avtomatik aniqlash kodi.",
     pay_card_type: 'Uzcard / Humo',
     pay_auto_hint: "To'lov qilingach, hisobingiz 2-3 soniyada avtomatik Premium bo'ladi.",
 
@@ -474,7 +476,8 @@ export const translations = {
     pay_cancel: 'Отмена',
     pay_initiating: 'Формирование платежа...',
     pay_error_title: 'Ошибка оплаты',
-    pay_salt_note: '💡 Почему {amount} сум? Добавочные +{salt} сум — код авто-определения. Пожалуйста, переводите точную сумму без округления.',
+    pay_exact_warning: '❗️ Оплачивайте точную указанную сумму, иначе платёж не будет принят.',
+    pay_salt_note: '💡 Добавочные +{salt} сум — код авто-определения платежа.',
     pay_card_type: 'Uzcard / Humo',
     pay_auto_hint: 'После перевода Premium включится автоматически за 2-3 секунды.',
 

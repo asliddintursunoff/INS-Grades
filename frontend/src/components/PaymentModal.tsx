@@ -354,13 +354,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     </button>
                   </div>
 
-                  {/* Single unified explanation: clear, non-repetitive */}
-                  <div className="text-[11px] text-amber-950/90 leading-relaxed font-medium pt-0.5">
+                  {/* Red warning text */}
+                  <p className="text-xs text-rose-600 font-bold leading-snug pt-0.5">
+                    {t('pay_exact_warning')}
+                  </p>
+
+                  {/* Salt explanation note */}
+                  <p className="text-[11px] text-amber-950/80 leading-relaxed font-medium">
                     {t('pay_salt_note', {
                       amount: paymentData.formatted_amount,
                       salt: paymentData.salt
                     })}
-                  </div>
+                  </p>
                 </div>
 
                 {/* 3. Subtle Hint */}
