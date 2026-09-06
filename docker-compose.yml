@@ -93,7 +93,7 @@ services:
       - TELETHON_SESSION_STRING=${TELETHON_SESSION_STRING:-}
       - BACKEND_API_URL=http://backend:3000
       - PAYMENT_SECRET_KEY=ins_pay_internal_secret_2026_x77
-      - ALLOWED_SMS_SENDERS=*
+      - ALLOWED_SMS_SENDERS=humocardbot
       - TELEGRAM_BOT_TOKEN=your_token_here
       - ADMIN_TELEGRAM_ID=${ADMIN_TELEGRAM_ID:-}
     depends_on:

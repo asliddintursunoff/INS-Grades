@@ -1919,34 +1919,55 @@ def mark_class_alert_sent(request):
 
 def extract_uzs_amount(text: str, base_amount: int = 10000) -> Optional[int]:
     """
-    Intelligently extracts the payment amount in UZS from SMS / notification texts.
-    Prioritizes amounts matching the [base_amount, base_amount + 300] variance window,
-    then falls back to generic currency regex.
+    Intelligently extracts the incoming top-up payment amount in UZS from SMS / notification texts.
+    Strictly ignores debits/expenses (e.g. 'To'lov', '➖').
+    Extracts amount from deposit lines (e.g. '➕ 10.216,00 UZS').
+    Prioritizes amounts matching the [base_amount, base_amount + 300] variance window.
     """
     if not text:
         return None
 
-    # 1. First priority: Look for numbers in the range [base_amount, base_amount + 300]
-    # e.g. 10147, 10 147, 10,147
-    salt_candidates = re.findall(r'(?<!\d)(10[\s,\.]?[0-3]\d\d)(?!\d)', text)
+    lower_text = text.lower()
+
+    # Reject debits / expenses:
+    if "➖" in text:
+        return None
+    if ("to'lov" in lower_text or "oplata" in lower_text or "spisanie" in lower_text) and not (
+        "to'ldirish" in lower_text or "popolnenie" in lower_text or "пополнение" in lower_text or "tushdi" in lower_text
+    ):
+        return None
+
+    # 1. Priority 1: Deposit lines with '+' or '➕' (e.g. Humo/Uzcard notifications: '➕ 10.216,00 UZS')
+    # Matches '➕ 10.216,00 UZS', '+ 10.216,00 UZS', '➕10216 UZS', '+10150'
+    plus_matches = re.findall(r'[➕\+]\s*([\d\s\.]+)(?:,\d{2})?\s*(?:uzs|so\'?m|som)?', text, re.IGNORECASE)
+    for match in plus_matches:
+        # Humo uses '.' as thousands separator: 10.216 -> 10216
+        cleaned = re.sub(r'[\s\.]', '', match.strip())
+        if cleaned.isdigit():
+            val = int(cleaned)
+            if base_amount <= val <= base_amount + 300:
+                return val
+            elif val >= base_amount:
+                return val
+
+    # 2. Priority 2: Look for 5-digit number in the range [base_amount, base_amount + 300]
+    # e.g. 10216, 10.216, 10 216 (ignoring numbers preceded by minus or balance symbol 💰)
+    salt_candidates = re.findall(r'(?<![-–—➖\d])(10[\s\.]?[0-3]\d\d)(?!\d)', text)
     for cand in salt_candidates:
-        clean = re.sub(r'[\s,\.]', '', cand)
+        clean = re.sub(r'[\s\.]', '', cand)
         if clean.isdigit():
             val = int(clean)
             if base_amount <= val <= base_amount + 300:
                 return val
 
-    # 2. Look for explicit amount with currency symbols:
-    # +10 147 UZS, 10 147 so'm, 10,147.00 som
+    # 3. Priority 3: Explicit top-up keywords (tushdi, popolnenie, vnesenie)
     currency_patterns = [
-        r'(?:\+|tushdi|vnesenie|popolnenie|summa:?|oplata:?)\s*([\d\s,\.]+)\s*(?:uzs|so\'m|som|sum)',
-        r'([\d\s,\.]+)\s*(?:uzs|so\'m|som|sum)',
+        r'(?:tushdi|vnesenie|popolnenie|kirim)\s*:?\s*([\d\s\.]+)(?:,\d{2})?\s*(?:uzs|so\'m|som|sum)',
     ]
     for pattern in currency_patterns:
         matches = re.findall(pattern, text, re.IGNORECASE)
         for match in matches:
-            cleaned = re.sub(r'\.00$', '', match.strip())
-            cleaned = re.sub(r'[\s,]', '', cleaned)
+            cleaned = re.sub(r'[\s\.]', '', match.strip())
             if cleaned.isdigit():
                 val = int(cleaned)
                 if val >= 1000:

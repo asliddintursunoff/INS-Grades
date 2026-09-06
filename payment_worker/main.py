@@ -25,7 +25,11 @@ API_HASH = os.getenv("TELEGRAM_API_HASH")
 SESSION_STRING = os.getenv("TELETHON_SESSION_STRING")
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:3000").rstrip("/")
 PAYMENT_SECRET_KEY = os.getenv("PAYMENT_SECRET_KEY", "ins_pay_internal_secret_2026_x77")
-ALLOWED_SMS_SENDERS = [s.strip().lower() for s in os.getenv("ALLOWED_SMS_SENDERS", "*").split(",") if s.strip()]
+ALLOWED_SMS_SENDERS = [
+    s.strip().lstrip("@").lower()
+    for s in os.getenv("ALLOWED_SMS_SENDERS", "humocardbot").split(",")
+    if s.strip()
+]
 ADMIN_TELEGRAM_ID = os.getenv("ADMIN_TELEGRAM_ID")
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
@@ -56,33 +60,55 @@ async def send_admin_alert(text: str):
 
 
 async def process_sms_event(event, client: TelegramClient):
-    """Processes incoming messages from SMS forwarders or bank notification bots."""
+    """
+    Processes incoming messages strictly from authorized bank bots (e.g. @HUMOcardbot).
+    Completely ignores expenses/debits and only forwards valid top-up notifications.
+    """
     try:
         # Ignore outgoing messages sent by the user account itself
         if event.out:
             return
 
+        chat = await event.get_chat()
         sender = await event.get_sender()
-        sender_id = str(getattr(sender, 'id', 'unknown'))
-        sender_username = (getattr(sender, 'username', '') or '').lower()
+
+        sender_id = str(getattr(sender, 'id', ''))
+        sender_username = (getattr(sender, 'username', '') or '').lstrip('@').lower()
         sender_phone = (getattr(sender, 'phone', '') or '').lower()
         sender_name = f"{getattr(sender, 'first_name', '')} {getattr(sender, 'last_name', '')}".strip()
 
-        # Check sender filtering if configured
+        chat_id = str(getattr(chat, 'id', ''))
+        chat_username = (getattr(chat, 'username', '') or '').lstrip('@').lower()
+
+        # Strict sender filtering: default only humocardbot
         if "*" not in ALLOWED_SMS_SENDERS:
-            allowed = False
-            for allowed_sender in ALLOWED_SMS_SENDERS:
-                if allowed_sender in (sender_id, sender_username, f"@{sender_username}", sender_phone):
-                    allowed = True
+            matched_sender = False
+            for allowed in ALLOWED_SMS_SENDERS:
+                if allowed in (sender_id, sender_username, chat_id, chat_username, sender_phone):
+                    matched_sender = True
                     break
-            if not allowed:
+            if not matched_sender:
+                # Silently ignore messages from any other bot, group, or user
                 return
 
         raw_text = event.raw_text or ""
         if not raw_text.strip():
             return
 
-        logger.info(f"Incoming message from '{sender_name or sender_id}' (msg_id: {event.id}): {raw_text[:80]}...")
+        # Pre-filter for HUMOcardbot / Bank notifications:
+        # 1. Type 1: Expense/Debit (💸 To'lov ➖ 10.075,00 UZS) -> MUST IGNORE COMPLETELY!
+        lower_text = raw_text.lower()
+        if "➖" in raw_text or (
+            ("to'lov" in lower_text or "oplata" in lower_text or "spisanie" in lower_text)
+            and not ("to'ldirish" in lower_text or "popolnenie" in lower_text or "пополнение" in lower_text)
+        ):
+            return
+
+        # 2. Type 2: Top-up/Deposit (🎉 To'ldirish ➕ 10.216,00 UZS) -> ONLY PROCESS THIS!
+        if not ("➕" in raw_text or "+" in raw_text or "to'ldirish" in lower_text or "popolnenie" in lower_text or "пополнение" in lower_text):
+            return
+
+        logger.info(f"Incoming top-up notification from '{chat_username or sender_username}' (msg_id: {event.id}): {raw_text[:80]}...")
 
         # Forward message to Django Backend for atomic matching and verification
         target_endpoint = f"{BACKEND_API_URL}/api/payments/process-incoming-sms/"
@@ -92,8 +118,8 @@ async def process_sms_event(event, client: TelegramClient):
         }
         payload = {
             "raw_message": raw_text,
-            "sender": sender_name or sender_username or sender_id,
-            "telegram_message_id": f"{sender_id}_{event.id}"
+            "sender": chat_username or sender_username or sender_name or sender_id,
+            "telegram_message_id": f"{chat_id or sender_id}_{event.id}"
         }
 
         async with httpx.AsyncClient(timeout=10.0) as http_client:
@@ -106,7 +132,7 @@ async def process_sms_event(event, client: TelegramClient):
         data = resp.json()
 
         if data.get("duplicate"):
-            logger.info(f"Duplicate SMS ignored (msg_id: {event.id}).")
+            logger.info(f"Duplicate notification ignored (msg_id: {event.id}).")
         elif data.get("matched"):
             amount = data.get("amount")
             student_id = data.get("student_id")
@@ -114,7 +140,7 @@ async def process_sms_event(event, client: TelegramClient):
             tx_id = data.get("transaction_id")
             logger.info(f"✅ [MATCHED] Payment of {amount:,} UZS verified for {student_name} ({student_id})! Transaction: {tx_id}")
             
-            # Send notification to admin
+            # Send notification to admin ONLY on successful payment match
             await send_admin_alert(
                 f"✅ <b>Yangi to'lov qabul qilindi!</b>\n\n"
                 f"👤 <b>Talaba:</b> {student_name} (<code>{student_id}</code>)\n"
@@ -125,14 +151,8 @@ async def process_sms_event(event, client: TelegramClient):
         else:
             extracted = data.get("extracted_amount")
             reason = data.get("reason", "Unknown")
-            logger.warning(f"⚠️ [UNMATCHED] Incoming SMS with amount {extracted} UZS could not be matched ({reason}). Logged to audit trail.")
-            if extracted:
-                await send_admin_alert(
-                    f"⚠️ <b>Noma'lum yoki kechiktirilgan to'lov!</b>\n\n"
-                    f"💰 <b>Aniqlangan summa:</b> {extracted:,} so'm\n"
-                    f"📩 <b>Matn:</b> <i>{raw_text[:200]}</i>\n"
-                    f"ℹ️ <b>Holat:</b> Birorta ham kutilayotgan (pending) tranzaksiyaga to'g'ri kelmadi. Audit logga saqlandi."
-                )
+            logger.warning(f"⚠️ [UNMATCHED] Deposit ({extracted} UZS): {reason}. Logged to audit trail (no alert sent).")
+            # NOTE: Intentionally do NOT send admin alert for unmatched payments to prevent notification spam or feedback loops.
 
     except Exception as e:
         logger.error(f"Error handling incoming message event: {e}", exc_info=True)
