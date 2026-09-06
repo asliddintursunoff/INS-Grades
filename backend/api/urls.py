@@ -7,6 +7,7 @@ from .views import (
     auth_session,
     auth_me,
     auth_link,
+    register_student,
     get_student_timetable,
     get_group_timetable,
     get_timetable_image,
@@ -50,6 +51,8 @@ urlpatterns = [
     re_path(r'^auth/me/(?P<telegram_id>[^/]+)/?$', auth_me, name='auth_me'),
     re_path(r'^auth/link/?$', auth_link, name='auth_link'),
     re_path(r'^students/link-telegram/?$', link_telegram, name='link_telegram'),
+    re_path(r'^students/register/?$', register_student, name='register_student'),
+    re_path(r'^auth/register/?$', register_student, name='auth_register'),
 
     # Timetable Operations
     re_path(r'^students/(?P<student_id>[^/]+)/timetable/?$', get_student_timetable, name='student_timetable_direct'),

@@ -26,30 +26,42 @@ export default function App() {
   }, []);
 
   const [loading, setLoading] = useState(true);
+  const [notRegistered, setNotRegistered] = useState(false);
 
   const fetchInitialData = useCallback(() => {
     setLoading(true);
+    setNotRegistered(false);
+
     apiCall('/api/system/status')
       .then((res) => setSystemStatus(res))
       .catch((err) => console.error('Failed to load status:', err));
 
+    const tgUser = getTelegramUser();
+    if (tgUser && tgUser.id) {
+      // Query specific student record by telegram_id
+      apiCall<{ found: boolean; student?: Student }>(`/api/auth/me/${tgUser.id}`)
+        .then((res) => {
+          if (res.found && res.student) {
+            setCurrentStudent(res.student);
+            setNotRegistered(false);
+          } else {
+            setCurrentStudent(null);
+            setNotRegistered(true);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load student for telegram user:', err);
+          setNotRegistered(true);
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+
+    // Default web preview (when opening outside Telegram WebApp)
     apiCall<{ students: Student[]; database_connected?: boolean; error?: string }>('/api/demo/students')
       .then((res) => {
         const list = res.students || [];
         setStudents(list);
-
-        // Check if Telegram user is linked
-        const tgUser = getTelegramUser();
-        if (tgUser) {
-          const matched = list.find((s) => s.telegram_id === tgUser.id);
-          if (matched) {
-            setCurrentStudent(matched);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Default to first student (e.g. U2410252 - Asliddin Xolmatov)
         if (list.length > 0) {
           setCurrentStudent(list[0]);
         }
@@ -143,6 +155,53 @@ export default function App() {
                 botUsername={botUsername}
               />
             )}
+          </div>
+        ) : notRegistered ? (
+          <div className="py-8 max-w-md mx-auto">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 text-center space-y-5 shadow-xs">
+              <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto border border-amber-200 shadow-2xs">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <div className="space-y-1.5">
+                <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
+                  Please Register First
+                </h2>
+                <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
+                  Your Telegram account is not linked to any student profile yet.
+                  Please register in our bot to unlock your timetable, courses, and attendance.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left space-y-2 text-xs text-slate-600">
+                <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <span>📋</span> Simple 3-step registration:
+                </p>
+                <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-slate-600 pl-0.5">
+                  <li>Open the Telegram bot: <span className="font-semibold text-blue-600">@{botUsername}</span></li>
+                  <li>Send your <b>Student ID</b> (e.g. <code>U2410252</code>)</li>
+                  <li>Select your course and group</li>
+                </ol>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <a
+                  href={`https://t.me/${botUsername}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all active:scale-[0.99]"
+                >
+                  <span>Open @{botUsername}</span>
+                </a>
+                <button
+                  onClick={fetchInitialData}
+                  disabled={loading}
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  <span>{loading ? 'Checking...' : 'I have registered, refresh'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="py-10 max-w-xl mx-auto">

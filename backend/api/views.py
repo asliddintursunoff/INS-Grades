@@ -286,6 +286,9 @@ def auth_link(request):
             status=status.HTTP_404_NOT_FOUND
         )
 
+    # Prevent telegram_id unique constraint conflict
+    Student.objects.filter(telegram_id=telegram_id).exclude(student_id=student.student_id).update(telegram_id=None)
+
     student.telegram_id = telegram_id
     if telegram_username:
         student.telegram_username = telegram_username
@@ -303,6 +306,103 @@ def auth_link(request):
         "full_name": student.full_name,
         "group_name": student.group.group_name if student.group else "",
         "year_of_study": student.year_of_study or 2,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_student(request):
+    """
+    Registers or updates a student profile, links Telegram ID,
+    and automatically enrolls the student into all course classes in the chosen group.
+    """
+    student_id = str(request.data.get('student_id', '')).strip().upper()
+    full_name = str(request.data.get('full_name', '')).strip()
+    group_name = str(request.data.get('group_name', '')).strip()
+    group_id = request.data.get('group_id')
+    year_of_study = request.data.get('year_of_study', 1)
+    telegram_id = request.data.get('telegram_id')
+    telegram_username = request.data.get('telegram_username', '')
+
+    if not student_id:
+        return Response({"success": False, "error": "student_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Resolve group
+    group = None
+    if group_id:
+        group = Group.objects.filter(group_id=group_id).first()
+    if not group and group_name:
+        group = Group.objects.filter(group_name__iexact=group_name).first()
+
+    if not group:
+        return Response(
+            {"success": False, "error": f"Group '{group_name or group_id}' not found in database"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Unlink any existing student with same telegram_id
+    if telegram_id:
+        Student.objects.filter(telegram_id=int(telegram_id)).exclude(student_id=student_id).update(telegram_id=None)
+
+    # 1. Create or update Student
+    student = Student.objects.filter(student_id__iexact=student_id).first()
+    if not student:
+        student = Student.objects.create(
+            student_id=student_id,
+            full_name=full_name or f"Student {student_id}",
+            group=group,
+            year_of_study=int(year_of_study) if year_of_study else 1,
+            telegram_id=int(telegram_id) if telegram_id else None,
+            telegram_username=telegram_username or None,
+        )
+    else:
+        student.group = group
+        if full_name and (student.full_name.startswith("Student ") or not student.full_name):
+            student.full_name = full_name
+        elif full_name:
+            student.full_name = full_name
+        if year_of_study:
+            student.year_of_study = int(year_of_study)
+        if telegram_id:
+            student.telegram_id = int(telegram_id)
+        if telegram_username:
+            student.telegram_username = telegram_username
+        student.save()
+
+    # 2. Automatically enroll student in every lesson/course class for this group
+    group_classes = CourseClass.objects.filter(group=group)
+    enrolled_count = 0
+    for cc in group_classes:
+        _, created = StudentClassEnrollment.objects.get_or_create(
+            student=student,
+            course_class=cc,
+            defaults={'status': 'active'}
+        )
+        if created:
+            enrolled_count += 1
+
+    # 3. Ensure Notification Settings
+    NotificationSettings.objects.get_or_create(
+        student=student,
+        defaults={'enabled': 1, 'minutes_before': 30}
+    )
+
+    group_name_str = group.group_name
+    img_url = get_group_s3_url(group_name_str, group.timetable_image_url)
+
+    return Response({
+        "success": True,
+        "message": f"Student {student.student_id} successfully registered and enrolled in {group_classes.count()} courses.",
+        "student": {
+            "student_id": student.student_id,
+            "full_name": student.full_name,
+            "group_name": group_name_str,
+            "group_id": group.group_id,
+            "year_of_study": student.year_of_study,
+            "telegram_id": student.telegram_id,
+            "timetable_image_url": img_url,
+        },
+        "enrolled_count": group_classes.count()
     })
 
 
