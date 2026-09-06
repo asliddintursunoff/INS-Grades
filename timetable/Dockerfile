@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -7,16 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install Chromium, Chromium-Driver, and required system libraries for Headless Chrome
+# Install Chromium, Chromium-Driver, and required fonts
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     chromium-driver \
     fonts-liberation \
-    libnss3 \
-    libgconf-2-4 \
-    libxss1 \
-    libappindicator1 \
-    libasound2 \
+    ca-certificates \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

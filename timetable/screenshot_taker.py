@@ -72,7 +72,24 @@ class TimetableScreenshotTaker:
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
 
-        driver = webdriver.Chrome(options=options)
+        chromedriver_bin = (
+            os.getenv("CHROMEDRIVER_PATH")
+            or shutil.which("chromedriver")
+            or "/usr/bin/chromedriver"
+        )
+        service = None
+        if chromedriver_bin and os.path.isfile(chromedriver_bin) and os.access(chromedriver_bin, os.X_OK):
+            try:
+                from selenium.webdriver.chrome.service import Service
+                service = Service(executable_path=chromedriver_bin)
+            except Exception:
+                pass
+
+        if service:
+            driver = webdriver.Chrome(service=service, options=options)
+        else:
+            driver = webdriver.Chrome(options=options)
+
         driver.set_window_size(self.window_size[0], self.window_size[1])
         return driver
 
