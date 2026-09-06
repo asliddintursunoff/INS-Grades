@@ -590,17 +590,32 @@ def get_student_timetable(request, student_id):
     group_name = group.group_name if group else ""
     image_url = get_group_s3_url(group_name, group.timetable_image_url if group else None)
 
-    # 1. Dropped class IDs for this student
+    # 1. Dropped class IDs and subjects for this student
     dropped_class_ids = set(
         StudentClassEnrollment.objects.filter(
             student=student, status='dropped'
         ).values_list('course_class_id', flat=True)
     )
+    dropped_subject_ids = set(
+        StudentClassEnrollment.objects.filter(
+            student=student, status='dropped'
+        ).values_list('course_class__subject_id', flat=True)
+    )
+    active_subject_ids = set(
+        StudentClassEnrollment.objects.filter(
+            student=student, status='active'
+        ).values_list('course_class__subject_id', flat=True)
+    )
+    truly_dropped_subject_ids = dropped_subject_ids - active_subject_ids
 
-    # 2. Base group slots (excluding explicitly dropped classes)
+    # 2. Base group slots (excluding explicitly dropped classes or dropped subjects)
     base_slots = GroupTimetableSlot.objects.filter(group=group).select_related(
         'course_class__subject', 'course_class__professor', 'course_class__group'
-    ).exclude(course_class_id__in=dropped_class_ids).order_by('day_of_week', 'start_time')
+    ).exclude(
+        course_class_id__in=dropped_class_ids
+    ).exclude(
+        course_class__subject_id__in=truly_dropped_subject_ids
+    ).order_by('day_of_week', 'start_time')
 
     # 3. Extra enrolled classes outside base group (retakes or electives)
     extra_enrollments = StudentClassEnrollment.objects.filter(
@@ -611,12 +626,20 @@ def get_student_timetable(request, student_id):
     extra_class_ids = [e.course_class_id for e in extra_enrollments]
     extra_slots = GroupTimetableSlot.objects.filter(
         course_class_id__in=extra_class_ids
+    ).exclude(
+        course_class_id__in=dropped_class_ids
+    ).exclude(
+        course_class__subject_id__in=truly_dropped_subject_ids
     ).select_related(
         'course_class__subject', 'course_class__professor', 'course_class__group'
     ).order_by('day_of_week', 'start_time')
 
-    # 4. Schedule overrides
-    overrides = ScheduleOverride.objects.filter(student=student).select_related(
+    # 4. Schedule overrides (excluding dropped classes or dropped subjects)
+    overrides = ScheduleOverride.objects.filter(student=student).exclude(
+        course_class_id__in=dropped_class_ids
+    ).exclude(
+        course_class__subject_id__in=truly_dropped_subject_ids
+    ).select_related(
         'course_class__subject', 'course_class__professor', 'course_class__group'
     ).order_by('day_of_week', 'start_time')
 
@@ -810,22 +833,38 @@ def student_classes(request, student_id):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def student_drop_class(request, student_id):
-    """Marks a course class as dropped for a student."""
+    """Marks a course class as dropped for a student and removes it from schedule."""
     student = resolve_student_obj(student_id)
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
     class_id = request.data.get('class_id')
-    if not class_id:
-        return Response({"error": "class_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+    subject_id = request.data.get('subject_id')
+    if not class_id and not subject_id:
+        return Response({"error": "class_id or subject_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    enr = StudentClassEnrollment.objects.filter(student=student, course_class_id=class_id).first()
-    if enr:
-        enr.status = 'dropped'
-        enr.dropped_at = datetime.datetime.now(datetime.timezone.utc)
-        enr.save()
+    cc = None
+    if class_id:
+        cc = CourseClass.objects.filter(class_id=int(class_id)).select_related('subject').first()
 
-    return Response({"success": True, "message": "Course successfully dropped"})
+    target_subject_id = subject_id or (cc.subject_id if cc else None)
+
+    if target_subject_id:
+        StudentClassEnrollment.objects.filter(
+            student=student, course_class__subject_id=target_subject_id
+        ).update(status='dropped', dropped_at=datetime.datetime.now(datetime.timezone.utc))
+        ScheduleOverride.objects.filter(
+            student=student, course_class__subject_id=target_subject_id
+        ).delete()
+    elif class_id:
+        StudentClassEnrollment.objects.filter(
+            student=student, course_class_id=class_id
+        ).update(status='dropped', dropped_at=datetime.datetime.now(datetime.timezone.utc))
+        ScheduleOverride.objects.filter(
+            student=student, course_class_id=class_id
+        ).delete()
+
+    return Response({"success": True, "message": "Course successfully dropped and removed from schedule"})
 
 
 @api_view(['POST'])
@@ -849,6 +888,21 @@ def student_retake_class(request, student_id):
         enr.status = 'active'
         enr.dropped_at = None
         enr.save()
+
+    # Restore ScheduleOverride if class is outside student's base group
+    cc = CourseClass.objects.filter(class_id=class_id).first()
+    if cc and student.group_id != cc.group_id:
+        ScheduleOverride.objects.filter(student=student, course_class__subject=cc.subject).delete()
+        slots = GroupTimetableSlot.objects.filter(course_class=cc).order_by('day_of_week', 'start_time')
+        for idx, slot in enumerate(slots, 1):
+            ScheduleOverride.objects.create(
+                student=student,
+                day_of_week=slot.day_of_week,
+                start_time=slot.start_time,
+                end_time=slot.end_time,
+                course_class=cc,
+                valid_to=f"session_{idx}:permanent"
+            )
 
     return Response({"success": True, "message": "Course successfully re-enrolled"})
 

@@ -68,6 +68,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
     setLoadingSlots(true);
     setFeedbackMessage(null);
     setSwitchConfirmOption(null);
+    setChangeType('permanent');
     setFilterUpcomingOnly(false);
     try {
       const sessionParam = slot.session_number ? `&session_number=${slot.session_number}` : '';
@@ -161,7 +162,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
     groupedByDay[item.day_of_week].push(item);
   });
 
-  const displayedOptions = filterUpcomingOnly
+  const displayedOptions = (changeType === 'one_time' && filterUpcomingOnly)
     ? availableSlots.filter((o) => o.is_upcoming)
     : availableSlots;
 
@@ -472,7 +473,10 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
               <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
                 <button
                   type="button"
-                  onClick={() => setChangeType('permanent')}
+                  onClick={() => {
+                    setChangeType('permanent');
+                    setFilterUpcomingOnly(false);
+                  }}
                   className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     changeType === 'permanent'
                       ? 'bg-white text-blue-700 shadow-2xs'
@@ -484,7 +488,10 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
                 </button>
                 <button
                   type="button"
-                  onClick={() => setChangeType('one_time')}
+                  onClick={() => {
+                    setChangeType('one_time');
+                    setFilterUpcomingOnly(true);
+                  }}
                   className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     changeType === 'one_time'
                       ? 'bg-white text-amber-700 shadow-2xs'
@@ -497,18 +504,24 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
               </div>
 
               {changeType === 'permanent' ? (
-                <div className="text-[11px] text-blue-900 bg-blue-50/80 border border-blue-200/80 rounded-lg px-2.5 py-1.5 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
-                  <span>
-                    <strong>Permanent Switch:</strong> Changes your weekly timetable for the whole semester.
-                  </span>
+                <div className="text-[11px] text-blue-900 bg-blue-50/90 border border-blue-200/90 rounded-xl p-3 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                    <RefreshCw className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Permanent Schedule Change (Full Semester)</span>
+                  </div>
+                  <p className="text-slate-600 leading-normal">
+                    Change this lecture session to another group’s weekly time slot for all remaining weeks of the semester. All weekly section options are listed below.
+                  </p>
                 </div>
               ) : (
-                <div className="text-[11px] text-amber-900 bg-amber-50/80 border border-amber-200/80 rounded-lg px-2.5 py-1.5 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0"></span>
-                  <span>
-                    <strong>One-Time Make-up:</strong> Applies this week only. Automatically reverts next week.
-                  </span>
+                <div className="text-[11px] text-amber-950 bg-amber-50/90 border border-amber-200/90 rounded-xl p-3 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>One-Time Make-Up Lesson (Missed a Class?)</span>
+                  </div>
+                  <p className="text-slate-700 leading-normal">
+                    If you missed or cannot attend your regular class this week, pick an <strong>upcoming lesson</strong> from another section with the same professor to earn your attendance. Applies for <strong>this week only</strong> — your schedule automatically reverts next week.
+                  </p>
                 </div>
               )}
             </div>
@@ -530,17 +543,23 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
               <span className="text-xs font-bold text-slate-800">
                 Choose New Section Time:
               </span>
-              <button
-                onClick={() => setFilterUpcomingOnly(!filterUpcomingOnly)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                  filterUpcomingOnly
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>Upcoming Only ({upcomingCount})</span>
-              </button>
+              {changeType === 'one_time' ? (
+                <button
+                  onClick={() => setFilterUpcomingOnly(!filterUpcomingOnly)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    filterUpcomingOnly
+                      ? 'bg-amber-600 text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{filterUpcomingOnly ? `Upcoming Only (${upcomingCount})` : `Show All (${availableSlots.length})`}</span>
+                </button>
+              ) : (
+                <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+                  All Weekly Sections ({availableSlots.length})
+                </span>
+              )}
             </div>
 
             {/* Feedback Message */}
@@ -604,8 +623,12 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
                               {option.group_name}
                             </span>
                             
-                            {/* Upcoming badge */}
-                            {option.is_upcoming ? (
+                            {/* Upcoming / Weekly badge */}
+                            {changeType === 'permanent' ? (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                Weekly Slot
+                              </span>
+                            ) : option.is_upcoming ? (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
                                 <Clock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
                                 Upcoming Lesson
