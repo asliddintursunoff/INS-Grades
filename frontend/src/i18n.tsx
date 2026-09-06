@@ -87,6 +87,10 @@ export const translations = {
     pay_cancel: 'Cancel',
     pay_initiating: 'Generating payment request...',
     pay_error_title: 'Payment Error',
+    pay_salt_why_title: 'Why {amount} instead of 10,000 UZS?',
+    pay_salt_why_desc: 'The extra +{salt} UZS is your unique auto-verification code. Our automated system detects it in seconds to activate your Premium instantly.',
+    pay_salt_badge: 'Auto-Verification Code',
+    pay_card_type: 'Uzcard / Humo',
 
     // Timetable General
     all_days: 'All Days',
@@ -285,6 +289,10 @@ export const translations = {
     pay_cancel: 'Bekor qilish',
     pay_initiating: "To'lov shakllantirilmoqda...",
     pay_error_title: "To'lov xatoligi",
+    pay_salt_why_title: "Nega 10 000 emas, aynan {amount} so'm?",
+    pay_salt_why_desc: "Qo'shilgan +{salt} so'm — to'lovingizni bir necha soniyada avtomatik aniqlab, profilingizga Premium yoqish uchun berilgan xavfsiz identifikatsiya kodi hisoblanadi. Shuning uchun summani o'zgartirmasdan to'lang.",
+    pay_salt_badge: 'Avtomatik aniqlash kodi',
+    pay_card_type: 'Uzcard / Humo',
 
     // Timetable General
     all_days: 'Barcha kunlar',
@@ -483,6 +491,10 @@ export const translations = {
     pay_cancel: 'Отмена',
     pay_initiating: 'Формирование платежа...',
     pay_error_title: 'Ошибка оплаты',
+    pay_salt_why_title: 'Почему {amount}, а не 10 000 сум?',
+    pay_salt_why_desc: 'Дополнительные +{salt} сум — это уникальный код авто-определения. Наша система автоматически распознает ваш перевод за считанные секунды и моментально включит Premium.',
+    pay_salt_badge: 'Код авто-определения',
+    pay_card_type: 'Uzcard / Humo',
 
     // Timetable General
     all_days: 'Все дни',

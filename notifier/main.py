@@ -29,7 +29,7 @@ logger = logging.getLogger("ClassNotifier")
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 API_URL = (os.getenv("API_URL") or "http://backend:3000").rstrip("/")
-API_KEY = os.getenv("API_KEY", "ins_secure_api_key_2026_x89a")
+API_KEY = os.getenv("API_KEY", "")
 
 
 def get_tashkent_now():

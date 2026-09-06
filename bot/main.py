@@ -23,17 +23,18 @@ logger = logging.getLogger("TelegramBot")
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 API_URL = (os.getenv("API_URL") or "http://backend:3000").rstrip("/")
-API_KEY = os.getenv("API_KEY", "ins_secure_api_key_2026_x89a")
-APP_URL = os.getenv("APP_URL", "https://ins-grades.vercel.app")
+API_KEY = os.getenv("API_KEY", "")
+APP_URL = os.getenv("APP_URL", "")
+DJANGO_ADMIN_URL = os.getenv("DJANGO_ADMIN_URL", "https://ins-grades-production-4cd7.up.railway.app/admin/")
 
 # S3 Storage Configuration
-S3_ENDPOINT_URL = (os.getenv("S3_ENDPOINT_URL") or os.getenv("AWS_ENDPOINT_URL_S3") or "https://t3.storageapi.dev").rstrip("/")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME") or os.getenv("AWS_STORAGE_BUCKET_NAME") or "resilient-module-m3qmihat"
+S3_ENDPOINT_URL = (os.getenv("S3_ENDPOINT_URL") or os.getenv("AWS_ENDPOINT_URL_S3") or "").rstrip("/")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME") or os.getenv("AWS_STORAGE_BUCKET_NAME") or ""
 S3_ACCESS_KEY_ID = (
     os.getenv("S3_ACCESS_KEY_ID")
     or os.getenv("AWS_ACCESS_KEY_ID")
     or os.getenv("ACCESS_KEY_ID")
-    or "tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ"
+    or ""
 ).strip()
 S3_SECRET_ACCESS_KEY = (
     os.getenv("S3_SECRET_ACCESS_KEY")
@@ -55,7 +56,7 @@ DAY_NAMES = {
     7: "Sunday",
 }
 
-# Clean, simplified reply keyboard - strictly Timetable and Today's Lessons
+# Standard Student Menu Keyboard
 MAIN_MENU_KEYBOARD = {
     "keyboard": [
         [{"text": "📅 Timetable"}, {"text": "📖 Today's Lessons"}]
@@ -63,6 +64,35 @@ MAIN_MENU_KEYBOARD = {
     "resize_keyboard": True,
     "is_persistent": True
 }
+
+# Admin Menu Keyboard (Includes Statistics and Broadcast Buttons)
+ADMIN_MENU_KEYBOARD = {
+    "keyboard": [
+        [{"text": "📅 Timetable"}, {"text": "📖 Today's Lessons"}],
+        [{"text": "📊 Statistika (Admin)"}, {"text": "📢 Xabar yuborish"}]
+    ],
+    "resize_keyboard": True,
+    "is_persistent": True
+}
+
+BACK_KEYBOARD = {
+    "keyboard": [
+        [{"text": "🔙 Ortga"}]
+    ],
+    "resize_keyboard": True
+}
+
+
+def is_admin(tg_id: int) -> bool:
+    env_admin = os.getenv("ADMIN_TELEGRAM_ID", "").strip()
+    admin_list = [int(x.strip()) for x in env_admin.split(",") if x.strip().isdigit()]
+    if not admin_list:
+        return tg_id == 1220127328
+    return tg_id in admin_list or tg_id == 1220127328
+
+
+def get_user_keyboard(tg_id: int):
+    return ADMIN_MENU_KEYBOARD if is_admin(tg_id) else MAIN_MENU_KEYBOARD
 
 
 def natural_sort_key(name: str):
@@ -126,6 +156,36 @@ class TimetableTelegramBot:
         except Exception as e:
             logger.error(f"[TG Error] send_message: {e}")
             return None
+
+    async def copy_message(self, chat_id: int, from_chat_id: int, message_id: int):
+        """Copies any Telegram message (text, photo, video, doc, voice, etc.) to target user."""
+        url = f"{self.tg_base}/copyMessage"
+        payload = {
+            "chat_id": chat_id,
+            "from_chat_id": from_chat_id,
+            "message_id": message_id,
+        }
+        try:
+            r = await self.client.post(url, json=payload, timeout=12.0)
+            res = r.json()
+            return res.get("ok", False)
+        except Exception as e:
+            logger.debug(f"[TG Error] copy_message to {chat_id}: {e}")
+            return False
+
+    async def track_activity(self, tg_id: int, username: str, first_name: str, last_name: str):
+        """Asynchronously reports user activity to backend for analytics."""
+        if not tg_id:
+            return
+        try:
+            await self.api_post("bot/track-activity/", {
+                "telegram_id": tg_id,
+                "username": username or "",
+                "first_name": first_name or "",
+                "last_name": last_name or "",
+            })
+        except Exception as e:
+            logger.debug(f"[Track Activity] Error: {e}")
 
     async def setup_chat_menu_button(self):
         """Sets the official Telegram Mini App menu button at the bottom-left of the chat bar."""
@@ -256,11 +316,25 @@ class TimetableTelegramBot:
     async def handle_start(self, chat_id: int, user: dict):
         """
         Handle /start command.
+        If admin: sends admin greeting with admin menu.
         If user already exists in DB: opens the main menu.
         If user does NOT exist: asks for their Student ID.
         """
         tg_id = user.get("id")
         first_name = user.get("first_name", "Student")
+
+        # Admin special greeting
+        if is_admin(tg_id):
+            self.user_states.pop(tg_id, None)
+            admin_msg = (
+                f"👑 <b>Xush kelibsiz, Administrator!</b>\n\n"
+                f"INS Grades boshqaruv botining admin panelidasiz.\n\n"
+                f"📊 <b>Statistika (Admin):</b> Moliyaviy tushumlar, oylik/kunlik xaridlar va Django Admin havolasi\n"
+                f"📢 <b>Xabar yuborish:</b> Barcha foydalanuvchilarga matn, rasm, video yoki fayl tarqatish (Broadcast)\n"
+                f"📅 <b>Dars jadvali:</b> O'z jadvalingizni ko'rish"
+            )
+            await self.send_message(chat_id, admin_msg, reply_markup=ADMIN_MENU_KEYBOARD)
+            return
 
         # Check if user already exists and is linked
         student_data = await self.api_get(f"students/?telegram_id={tg_id}")
@@ -275,7 +349,7 @@ class TimetableTelegramBot:
                 f"Tap <b>📅 Timetable</b> below to view your full weekly schedule and photo, "
                 f"or open <b>INS Grades</b> from the bottom menu bar."
             )
-            await self.send_message(chat_id, msg, reply_markup=MAIN_MENU_KEYBOARD)
+            await self.send_message(chat_id, msg, reply_markup=get_user_keyboard(tg_id))
             return
 
         # User is not registered or linked yet
@@ -288,15 +362,102 @@ class TimetableTelegramBot:
         )
         await self.send_message(chat_id, msg)
 
-    async def handle_text(self, chat_id: int, user: dict, text: str):
-        """Handle incoming text messages and menu button clicks."""
-        text = text.strip()
+    async def handle_message(self, chat_id: int, user: dict, msg: dict):
+        """Handle incoming text messages, media, and menu button clicks."""
         tg_id = user.get("id")
         username = user.get("username", "")
+        first_name = user.get("first_name", "")
+        last_name = user.get("last_name", "")
+
+        # Always log user activity in background
+        asyncio.create_task(self.track_activity(tg_id, username, first_name, last_name))
+
+        state = self.user_states.get(tg_id)
+        text = (msg.get("text") or msg.get("caption") or "").strip()
+
+        # Handle BROADCAST input
+        if state and state.get("step") == "WAITING_BROADCAST_MESSAGE":
+            if text in ("🔙 Ortga", "ortga", "/cancel", "cancel", "Bekor qilish"):
+                self.user_states.pop(tg_id, None)
+                await self.send_message(chat_id, "❌ Xabar yuborish bekor qilindi.", reply_markup=ADMIN_MENU_KEYBOARD)
+                return
+
+            message_id = msg.get("message_id")
+            self.user_states[tg_id] = {
+                "step": "CONFIRM_BROADCAST",
+                "message_id": message_id,
+            }
+
+            confirm_kb = {
+                "inline_keyboard": [
+                    [
+                        {"text": "✅ Ha, barchaga yuborilsin", "callback_data": f"bc_send:{message_id}"},
+                        {"text": "❌ Bekor qilish", "callback_data": "bc_cancel"}
+                    ]
+                ]
+            }
+            await self.send_message(
+                chat_id,
+                "⚠️ <b>Ushbu xabarni barcha foydalanuvchilarga yuborishni tasdiqlaysizmi?</b>\n\n"
+                "Xabar barcha talabalar va bot foydalanuvchilariga aynan shu formatda yetkaziladi.",
+                reply_markup=confirm_kb
+            )
+            return
 
         # 1. Menu Buttons & Commands
         if text.startswith("/start") or text.lower() == "/help":
             await self.handle_start(chat_id, user)
+            return
+
+        if text in ("📊 Statistika (Admin)", "/stats", "/admin"):
+            if not is_admin(tg_id):
+                await self.send_message(chat_id, "⛔ Ushbu bo'lim faqat administrator uchun ochiq.")
+                return
+            stats = await self.api_get("admin/stats/")
+            if not stats:
+                await self.send_message(chat_id, "⚠️ Statistika ma'lumotlarini yuklab bo'lmadi.")
+                return
+
+            total_rev = f"{stats.get('total_revenue', 0):,}".replace(',', ' ')
+            month_rev = f"{stats.get('month_revenue', 0):,}".replace(',', ' ')
+            today_rev = f"{stats.get('today_revenue', 0):,}".replace(',', ' ')
+
+            stat_text = (
+                f"📊 <b>INS Grades - Jonli Tizim Statistikasi</b>\n\n"
+                f"💰 <b>Jami ishlangan pul:</b> <code>{total_rev} so'm</code> ({stats.get('total_purchases_count', 0)} ta xarid)\n"
+                f"📅 <b>Shu oyda ishlangan:</b> <code>{month_rev} so'm</code> ({stats.get('month_purchases_count', 0)} ta xarid)\n"
+                f"⚡ <b>Bugun ishlangan:</b> <code>{today_rev} so'm</code> ({stats.get('today_purchases_count', 0)} ta xarid)\n\n"
+                f"🤖 <b>Jami bot foydalanuvchilari:</b> <code>{stats.get('total_bot_users', 0)} ta</code>\n"
+                f"🟢 <b>Bugun botga kirganlar:</b> <code>{stats.get('today_bot_users', 0)} ta</code>\n"
+                f"🔥 <b>Aktiv foydalanuvchilar:</b> <code>{stats.get('active_bot_users', 0)} ta</code>\n\n"
+                f"⭐ <b>Faol Premium obunalar:</b> <code>{stats.get('active_premium_students', 0)} ta</code>\n"
+                f"🎓 <b>Ulangan talabalar:</b> <code>{stats.get('linked_students', 0)} / {stats.get('total_students', 0)} ta</code>\n\n"
+                f"Barcha tranzaksiyalar va to'liq boshqaruv uchun Django Adminga o'ting:"
+            )
+            admin_kb = {
+                "inline_keyboard": [
+                    [{"text": "🔗 Django Adminni ochish", "url": DJANGO_ADMIN_URL}]
+                ]
+            }
+            await self.send_message(chat_id, stat_text, reply_markup=admin_kb)
+            return
+
+        if text in ("📢 Xabar yuborish", "/broadcast"):
+            if not is_admin(tg_id):
+                await self.send_message(chat_id, "⛔ Ushbu funksiya faqat administrator uchun ochiq.")
+                return
+            self.user_states[tg_id] = {"step": "WAITING_BROADCAST_MESSAGE"}
+            msg_text = (
+                f"📢 <b>Barcha foydalanuvchilarga xabar yuborish</b>\n\n"
+                f"Iltimos, yubormoqchi bo'lgan xabaringizni yuboring (matn, rasm, video, audio yoki fayl bo'lishi mumkin).\n\n"
+                f"Bekor qilish uchun <b>🔙 Ortga</b> tugmasini bosing."
+            )
+            await self.send_message(chat_id, msg_text, reply_markup=BACK_KEYBOARD)
+            return
+
+        if text in ("🔙 Ortga", "ortga", "/cancel"):
+            self.user_states.pop(tg_id, None)
+            await self.send_message(chat_id, "Bosh menyu:", reply_markup=get_user_keyboard(tg_id))
             return
 
         if text in ("📅 Timetable", "timetable", "/timetable", "/photo", "/image", "/week", "schedule"):
@@ -308,6 +469,8 @@ class TimetableTelegramBot:
             return
 
         # 2. Check if student sent their Student ID candidate
+        if not text:
+            return
         candidate = text.upper().strip()
 
         # Check if student exists in database
@@ -332,7 +495,7 @@ class TimetableTelegramBot:
                     f"👥 <b>Group:</b> {s.get('group_name', 'Assigned')}\n\n"
                     f"Your account is linked. Tap <b>📅 Timetable</b> below to view your schedule:"
                 )
-                await self.send_message(chat_id, msg, reply_markup=MAIN_MENU_KEYBOARD)
+                await self.send_message(chat_id, msg, reply_markup=get_user_keyboard(tg_id))
             else:
                 await self.send_message(chat_id, "⚠️ Failed to link account. Please try sending your Student ID again.")
             return
@@ -375,6 +538,59 @@ class TimetableTelegramBot:
         data = query.get("data", "")
 
         state = self.user_states.get(tg_id)
+
+        # Broadcast Confirmation or Cancellation
+        if data.startswith("bc_send:"):
+            _, orig_msg_id_str = data.split(":")
+            orig_msg_id = int(orig_msg_id_str)
+            self.user_states.pop(tg_id, None)
+
+            recipients_data = await self.api_get("bot/broadcast-recipients/") or {}
+            recipients = recipients_data.get("recipients", [])
+
+            if not recipients:
+                await self.send_message(chat_id, "ℹ️ Yuborish uchun birorta ham foydalanuvchi topilmadi.", reply_markup=ADMIN_MENU_KEYBOARD)
+                return
+
+            total = len(recipients)
+            status_res = await self.send_message(chat_id, f"⏳ <b>Xabar tarqatilmoqda...</b> (0 / {total})")
+            status_msg_id = status_res.get("result", {}).get("message_id") if status_res else None
+
+            success_count = 0
+            fail_count = 0
+
+            for idx, uid in enumerate(recipients, 1):
+                ok = await self.copy_message(chat_id=uid, from_chat_id=chat_id, message_id=orig_msg_id)
+                if ok:
+                    success_count += 1
+                else:
+                    fail_count += 1
+
+                if (idx % 10 == 0 or idx == total) and status_msg_id:
+                    await self.edit_message_text(
+                        chat_id, status_msg_id,
+                        f"⏳ <b>Xabar tarqatilmoqda...</b> ({idx} / {total})\n✅ Yuborildi: {success_count}\n⚠️ Xato/Block: {fail_count}"
+                    )
+                await asyncio.sleep(0.04)
+
+            report = (
+                f"📢 <b>Xabar tarqatish yakunlandi!</b>\n\n"
+                f"👥 <b>Jami foydalanuvchilar:</b> {total} ta\n"
+                f"✅ <b>Yetkazildi:</b> {success_count} ta\n"
+                f"⚠️ <b>Yetib bormadi (bloklagan):</b> {fail_count} ta"
+            )
+            if status_msg_id:
+                await self.edit_message_text(chat_id, status_msg_id, report)
+            else:
+                await self.send_message(chat_id, report)
+            await self.send_message(chat_id, "Asosiy menyu:", reply_markup=ADMIN_MENU_KEYBOARD)
+            return
+
+        if data == "bc_cancel":
+            self.user_states.pop(tg_id, None)
+            await self.send_message(chat_id, "❌ Xabar yuborish bekor qilindi.", reply_markup=ADMIN_MENU_KEYBOARD)
+            return
+
         if not state:
             await self.send_message(chat_id, "⚠️ Session expired. Please send /start to begin.")
             return
@@ -628,9 +844,7 @@ class TimetableTelegramBot:
                                 continue
                             chat_id = msg["chat"]["id"]
                             user = msg.get("from", {})
-                            text = msg.get("text", "")
-                            if text:
-                                await self.handle_text(chat_id, user, text)
+                            await self.handle_message(chat_id, user, msg)
 
                         elif "callback_query" in update:
                             await self.handle_callback_query(update["callback_query"])

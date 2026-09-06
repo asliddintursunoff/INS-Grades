@@ -45,7 +45,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -162,10 +162,10 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # CSRF Trusted Origins
-csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://*.up.railway.app,https://*.vercel.app,http://localhost:3000,http://localhost:5173')
+csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_trusted.split(',') if origin.strip()]
 
 # Custom API Security
-API_KEY = os.getenv('API_KEY', 'ins_secure_api_key_2026_x89a')
+API_KEY = os.getenv('API_KEY', '')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
-APP_URL = os.getenv('APP_URL', 'https://ins-grades.vercel.app')
+APP_URL = os.getenv('APP_URL', '')

@@ -56,8 +56,8 @@ DATABASE_URL=postgresql://postgres:your_password@your_railway_host:5432/railway
 # Railway S3-Compatible Object Storage Credentials
 S3_ENDPOINT_URL=https://t3.storageapi.dev
 S3_REGION=auto
-S3_BUCKET_NAME=resilient-module-m3qmihat
-S3_ACCESS_KEY_ID=tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ
+S3_BUCKET_NAME=your_bucket_name_here
+S3_ACCESS_KEY_ID=your_access_key_id_here
 S3_SECRET_ACCESS_KEY=your_secret_access_key_here
 ```
 

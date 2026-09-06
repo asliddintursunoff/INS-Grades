@@ -1,0 +1,265 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block content %}
+<style>
+  .stats-dashboard {
+    margin-bottom: 30px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  .stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: #ffffff;
+    padding: 20px 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .stats-header h1 {
+    font-size: 20px;
+    margin: 0;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .stats-header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+  .stats-badge {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid #10b981;
+    color: #34d399;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  }
+  .stat-card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-card-value {
+    font-size: 24px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+  .stat-card-sub {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+  .card-emerald { border-top: 4px solid #10b981; }
+  .card-blue { border-top: 4px solid #3b82f6; }
+  .card-amber { border-top: 4px solid #f59e0b; }
+  .card-indigo { border-top: 4px solid #6366f1; }
+  .card-purple { border-top: 4px solid #a855f7; }
+  .card-rose { border-top: 4px solid #f43f5e; }
+
+  .dashboard-section {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+  .dashboard-section h2 {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-top: 0;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .stats-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .stats-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+  }
+  .stats-table tr:hover td {
+    background: #f8fafc;
+  }
+  .badge-success {
+    background: #dcfce7;
+    color: #15803d;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+</style>
+
+<div class="stats-dashboard">
+  <div class="stats-header">
+    <div>
+      <h1><span>📊</span> INS Grades - Jonli Tizim Statistikasi</h1>
+      <p>Moliya, to'lov tranzaksiyalari va Telegram bot foydalanuvchilarining real-vaqtdagi analitikasi</p>
+    </div>
+    <div class="stats-badge">
+      ● JONLI MONITORING
+    </div>
+  </div>
+
+  <!-- 6 TA ASOSIY METRIKA KARTALARI -->
+  <div class="grid-cards">
+    <!-- 1. Jami Tushum -->
+    <div class="stat-card card-emerald">
+      <div class="stat-card-title">💰 Jami Ishlangan Pul</div>
+      <div class="stat-card-value">{{ total_revenue_fmt }} <span style="font-size: 14px; font-weight: bold; color: #64748b;">so'm</span></div>
+      <div class="stat-card-sub">Barcha vaqtdagi to'lovlar ({{ total_purchases_count }} ta xarid)</div>
+    </div>
+
+    <!-- 2. Shu Oydagi Tushum -->
+    <div class="stat-card card-blue">
+      <div class="stat-card-title">📅 Shu Oyda Ishlangan</div>
+      <div class="stat-card-value">{{ month_revenue_fmt }} <span style="font-size: 14px; font-weight: bold; color: #64748b;">so'm</span></div>
+      <div class="stat-card-sub">Shu oyda: {{ month_purchases_count }} ta to'lov amalga oshirildi</div>
+    </div>
+
+    <!-- 3. Bugungi Tushum -->
+    <div class="stat-card card-amber">
+      <div class="stat-card-title">⚡ Bugungi Tushum</div>
+      <div class="stat-card-value">{{ today_revenue_fmt }} <span style="font-size: 14px; font-weight: bold; color: #64748b;">so'm</span></div>
+      <div class="stat-card-sub">Bugun: {{ today_purchases_count }} ta yangi to'lov qabul qilindi</div>
+    </div>
+
+    <!-- 4. Jami Bot Foydalanuvchilari -->
+    <div class="stat-card card-indigo">
+      <div class="stat-card-title">🤖 Bot Foydalanuvchilari</div>
+      <div class="stat-card-value">{{ total_bot_users }} <span style="font-size: 14px; font-weight: bold; color: #64748b;">ta user</span></div>
+      <div class="stat-card-sub">Botni ishlatgan barcha foydalanuvchilar soni</div>
+    </div>
+
+    <!-- 5. Bugun Botga Kirganlar -->
+    <div class="stat-card card-purple">
+      <div class="stat-card-title">🟢 Bugun Botga Kirganlar</div>
+      <div class="stat-card-value">{{ today_bot_users }} <span style="font-size: 14px; font-weight: bold; color: #64748b;">ta</span></div>
+      <div class="stat-card-sub">Bugun faollik ko'rsatgan foydalanuvchilar</div>
+    </div>
+
+    <!-- 6. Aktiv Talabalar & Premium -->
+    <div class="stat-card card-rose">
+      <div class="stat-card-title">⭐ Faol Premium Obunalar</div>
+      <div class="stat-card-value">{{ active_premium_students }} <span style="font-size: 14px; font-weight: bold; color: #64748b;">ta</span></div>
+      <div class="stat-card-sub">Ulangan talabalar: {{ linked_students }} / {{ total_students }} ta</div>
+    </div>
+  </div>
+
+  <!-- OYLIK XARIDLAR STATISTIKASI JADVALI -->
+  <div class="dashboard-section">
+    <h2><span>📈</span> Oylik Xaridlar va Tushumlar Tarixi</h2>
+    {% if monthly_sales %}
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Oy (Yil-Oy)</th>
+            <th>Xaridlar Soni</th>
+            <th>Jami Tushum</th>
+            <th>O'rtacha Chek</th>
+            <th>Holat</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in monthly_sales %}
+            <tr>
+              <td><strong>{{ row.month_str }}</strong></td>
+              <td><span class="badge-success">{{ row.count }} ta xarid</span></td>
+              <td><strong style="color: #059669;">{{ row.total_amount_fmt }} so'm</strong></td>
+              <td>{{ row.avg_amount_fmt }} so'm</td>
+              <td><span style="color: #10b981; font-weight: bold;">✓ Bajarildi</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="color: #94a3b8; font-size: 13px;">Hozircha oylik xaridlar mavjud emas.</p>
+    {% endif %}
+  </div>
+
+  <!-- SO'NGGI TO'LOVLAR JADVALI -->
+  <div class="dashboard-section">
+    <h2><span>💳</span> Eng So'nggi Muvaffaqiyatli To'lovlar</h2>
+    {% if recent_transactions %}
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Vaqt</th>
+            <th>Talaba</th>
+            <th>Student ID</th>
+            <th>Summa</th>
+            <th>Identifikatsiya (Salt)</th>
+            <th>Holat</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in recent_transactions %}
+            <tr>
+              <td>{{ tx.completed_at|date:"d.m.Y H:i" }}</td>
+              <td><strong>{{ tx.student.full_name }}</strong></td>
+              <td><code>{{ tx.student.student_id }}</code></td>
+              <td><strong style="color: #059669;">{{ tx.total_amount }} so'm</strong></td>
+              <td>+{{ tx.salt }} so'm</td>
+              <td><span class="badge-success">COMPLETED</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="color: #94a3b8; font-size: 13px;">Hozircha muvaffaqiyatli to'lovlar mavjud emas.</p>
+    {% endif %}
+  </div>
+</div>
+
+{{ block.super }}
+{% endblock %}

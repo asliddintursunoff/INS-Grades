@@ -7,7 +7,10 @@ import {
   Sparkles, 
   AlertCircle, 
   RefreshCw,
-  ArrowRight
+  HelpCircle,
+  ShieldCheck,
+  CreditCard,
+  Wifi
 } from 'lucide-react';
 import { apiCall } from '../api';
 import { useLanguage } from '../i18n';
@@ -228,20 +231,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
       {/* Main Payment Step-by-Step Guide Modal */}
       {paymentStatus !== 'completed' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
             
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/20 flex items-center justify-center font-bold">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">
+                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
                     {t('pay_title')}
                   </h3>
-                  <div className="text-[11px] text-slate-500 font-medium">
+                  <div className="text-xs text-slate-500 font-medium">
                     {t('pay_subtitle')}
                   </div>
                 </div>
@@ -249,7 +252,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
               <button
                 onClick={onClose}
-                className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -257,8 +260,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
             {/* State 1: Initiating / Loading */}
             {loading && (
-              <div className="py-12 text-center space-y-3">
-                <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
+              <div className="py-14 text-center space-y-3">
+                <RefreshCw className="w-9 h-9 text-blue-600 animate-spin mx-auto" />
                 <p className="text-xs font-semibold text-slate-600">
                   {t('pay_initiating')}
                 </p>
@@ -284,90 +287,154 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </div>
             )}
 
-            {/* State 3: Active Pending Payment - Concise 3-Step Guide */}
+            {/* State 3: Active Pending Payment - Polished Guide */}
             {!loading && !error && paymentData && paymentStatus === 'pending' && (
-              <div className="space-y-3.5">
+              <div className="space-y-4">
                 
-                {/* Countdown Pill */}
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-950 text-xs">
+                {/* Countdown & Security Bar */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-950 text-xs">
                   <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse shrink-0" />
-                    <span className="font-semibold text-[11px]">{t('pay_expires_in')}</span>
+                    <Clock className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
+                    <span className="font-semibold text-xs">{t('pay_expires_in')}</span>
                   </div>
-                  <span className="font-mono text-xs font-black text-amber-900 bg-amber-200/60 px-2 py-0.5 rounded-md">
+                  <span className="font-mono text-xs font-black text-amber-950 bg-amber-200/80 px-2.5 py-0.5 rounded-md border border-amber-300">
                     {formatTimer(secondsRemaining)}
                   </span>
                 </div>
 
-                {/* Step 1: Copy Card Number */}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2">
-                  <span className="text-[11px] font-bold text-slate-700 block">
-                    {t('pay_step1_title')}
-                  </span>
-                  
-                  <div className="flex items-center justify-between gap-2 bg-white border border-slate-200/80 rounded-xl p-2.5">
-                    <span className="text-xs sm:text-sm font-black text-slate-900 font-mono tracking-wider">
-                      {paymentData.card_number}
+                {/* 1. Realistic Bank Card Graphic */}
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white p-4 sm:p-5 shadow-xl border border-slate-700/60">
+                  {/* Decorative card glow circles */}
+                  <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-blue-500/15 rounded-full blur-xl pointer-events-none" />
+                  <div className="absolute -left-6 -top-6 w-28 h-28 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
+
+                  {/* Top row: Chip, contactless waves, brand */}
+                  <div className="flex items-center justify-between relative z-10 mb-4">
+                    <div className="flex items-center gap-2">
+                      {/* EMV Chip graphic */}
+                      <div className="w-9 h-7 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-amber-300 border border-amber-500/60 shadow-xs flex items-center justify-center p-0.5">
+                        <div className="w-full h-full border border-amber-600/40 rounded-xs grid grid-cols-2 gap-0.5 opacity-80" />
+                      </div>
+                      <Wifi className="w-4 h-4 text-slate-300 rotate-90" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-200 bg-white/10 px-2 py-0.5 rounded-md backdrop-blur-xs border border-white/15">
+                      {t('pay_card_type')}
                     </span>
-                    <button
-                      onClick={() => copyToClipboard(paymentData.card_number.replace(/\s+/g, ''), 'card')}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
-                    >
-                      {copiedCard ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedCard ? t('pay_copied') : t('pay_copy')}</span>
-                    </button>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5 px-0.5">
-                    <span>{t('pay_card_holder')}:</span>
-                    <strong className="text-slate-800">{paymentData.card_holder}</strong>
+                  {/* Card Number & Copy */}
+                  <div className="relative z-10 space-y-1 mb-3.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      {t('pay_card_number')}
+                    </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-base sm:text-lg font-mono font-bold tracking-widest text-white select-all">
+                        {paymentData.card_number}
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(paymentData.card_number.replace(/\s+/g, ''), 'card')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-sm ${
+                          copiedCard 
+                            ? 'bg-emerald-500 text-white' 
+                            : 'bg-white/15 hover:bg-white/25 text-white backdrop-blur-xs border border-white/20 active:scale-95'
+                        }`}
+                      >
+                        {copiedCard ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedCard ? t('pay_copied') : t('pay_copy')}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card Holder */}
+                  <div className="relative z-10 flex items-center justify-between pt-1 border-t border-white/10 text-xs">
+                    <div>
+                      <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-semibold">
+                        {t('pay_card_holder')}
+                      </span>
+                      <span className="font-mono font-bold text-slate-200 uppercase text-xs">
+                        {paymentData.card_holder || 'TURSUNOV ASLIDDIN'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{t('pay_salt_badge')}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Step 2: Transfer EXACT Amount */}
-                <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-3.5 space-y-2.5">
-                  <span className="text-[11px] font-bold text-blue-950 block">
-                    {t('pay_step2_title')}
-                  </span>
+                {/* 2. EXACT Amount Box & Strict Red Warning */}
+                <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-500/30 rounded-2xl p-3.5 sm:p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                      {t('pay_exact_amount')}
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                      Aniqlik muhim ⚡
+                    </span>
+                  </div>
 
-                  <div className="flex items-center justify-between gap-2 bg-white border border-blue-200 rounded-xl p-2.5">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-black text-blue-700 tracking-tight font-mono">
+                  <div className="flex items-center justify-between gap-2 bg-white border border-amber-300 rounded-xl p-3 shadow-xs">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-mono">
                         {paymentData.formatted_amount}
                       </span>
-                      <span className="text-[11px] font-bold text-slate-600">UZS</span>
+                      <span className="text-xs font-extrabold text-slate-500">UZS</span>
                     </div>
 
                     <button
                       onClick={() => copyToClipboard(String(paymentData.total_amount), 'amount')}
-                      className="px-2.5 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-sm ${
+                        copiedAmount 
+                          ? 'bg-emerald-600 text-white' 
+                          : 'bg-amber-500 hover:bg-amber-600 text-white active:scale-95'
+                      }`}
                     >
-                      {copiedAmount ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedAmount ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       <span>{copiedAmount ? t('pay_copied') : t('pay_copy')}</span>
                     </button>
                   </div>
 
                   {/* Red strict warning notice */}
-                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-900 font-bold leading-snug">
-                    {t('pay_step2_warning')}
+                  <div className="p-3 rounded-xl bg-rose-50 border-2 border-rose-300 text-xs text-rose-950 font-bold leading-relaxed shadow-xs flex items-start gap-2">
+                    <span className="text-base shrink-0 leading-none">❗️</span>
+                    <div>{t('pay_step2_warning')}</div>
                   </div>
                 </div>
 
-                {/* Step 3: Return Here After Paying */}
-                <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3 text-[11px] text-emerald-950 font-medium leading-relaxed">
-                  <strong className="block text-emerald-900 font-bold mb-0.5">
-                    {t('pay_step3_title')}
-                  </strong>
-                  <p>{t('pay_step3_desc')}</p>
+                {/* 3. Salt Explanation Box ("Nega 10 000 emas, 10 101 so'm?") */}
+                <div className="bg-indigo-50/70 border border-indigo-200/90 rounded-2xl p-3.5 space-y-1.5">
+                  <div className="flex items-center gap-2 text-indigo-950 font-bold text-xs">
+                    <HelpCircle className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>{t('pay_salt_why_title', { amount: paymentData.formatted_amount })}</span>
+                  </div>
+                  <p className="text-[11px] text-indigo-900/80 leading-relaxed font-medium pl-6">
+                    {t('pay_salt_why_desc', { 
+                      salt: paymentData.salt, 
+                      amount: paymentData.formatted_amount 
+                    })}
+                  </p>
+                </div>
+
+                {/* 4. Simple 3-Step Navigation */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs text-slate-700 space-y-2">
+                  <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">i</span>
+                    <span>Qanday to'lash mumkin?</span>
+                  </div>
+                  <ol className="space-y-1.5 text-[11px] text-slate-600 pl-6 list-decimal font-medium">
+                    <li>Karta raqami va aniq summani nusxalang</li>
+                    <li>Click, Payme, Uzum yoki boshqa ilovada o'tkazma qiling</li>
+                    <li>Shu oynaga qayting — hisobingiz 2-3 soniyada avtomatik Premium bo'ladi!</li>
+                  </ol>
                 </div>
 
                 {/* Live Waiting Pulse */}
-                <div className="flex items-center justify-center gap-2 py-1 text-xs text-slate-500">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                <div className="flex items-center justify-center gap-2.5 py-1 text-xs text-slate-500">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
                   </span>
-                  <span className="font-semibold text-slate-600 animate-pulse text-[11px]">
+                  <span className="font-bold text-slate-700 animate-pulse text-xs">
                     {t('pay_waiting')}
                   </span>
                 </div>

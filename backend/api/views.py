@@ -4,7 +4,9 @@ import uuid
 import re
 import random
 from typing import Optional
-from django.db import connection, transaction
+from django.db import connection, transaction, models
+from django.db.models import Sum, Count, Avg, Q
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -31,6 +33,7 @@ from .models import (
     ClassNotificationLog,
     PaymentTransaction,
     PaymentAuditLog,
+    BotUser,
 )
 from .serializers import (
     ProfessorSerializer,
@@ -57,15 +60,16 @@ DAY_NAMES = {
     7: "Sunday",
 }
 
-DEFAULT_S3_BASE = "https://t3.storageapi.dev/resilient-module-m3qmihat/timetables"
-
-
 def get_group_s3_url(group_name: str, existing_url: Optional[str] = None) -> str:
     """Returns valid public S3 URL for a group's timetable screenshot."""
     if existing_url and (existing_url.startswith("http://") or existing_url.startswith("https://")):
         return existing_url
     sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "_", group_name or "").strip("._") or "group"
-    return f"{DEFAULT_S3_BASE}/{sanitized}.png"
+    endpoint = (os.getenv("S3_ENDPOINT_URL") or os.getenv("AWS_ENDPOINT_URL_S3") or "").rstrip("/")
+    bucket = os.getenv("S3_BUCKET_NAME") or os.getenv("AWS_STORAGE_BUCKET_NAME") or os.getenv("BUCKET_NAME") or ""
+    if endpoint and bucket:
+        return f"{endpoint}/{bucket}/timetables/{sanitized}.png"
+    return f"/static/timetables/{sanitized}.png"
 
 
 def get_timetable_image(request, group_name):
@@ -81,7 +85,7 @@ def get_timetable_image(request, group_name):
         os.getenv("S3_ACCESS_KEY_ID")
         or os.getenv("AWS_ACCESS_KEY_ID")
         or os.getenv("ACCESS_KEY_ID")
-        or "tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ"
+        or ""
     ).strip()
     s3_secret = (
         os.getenv("S3_SECRET_ACCESS_KEY")
@@ -94,8 +98,8 @@ def get_timetable_image(request, group_name):
         or os.getenv("SECRET_KEY")
         or ""
     ).strip()
-    bucket = os.getenv("S3_BUCKET_NAME") or os.getenv("AWS_STORAGE_BUCKET_NAME") or os.getenv("BUCKET_NAME") or "resilient-module-m3qmihat"
-    endpoint = (os.getenv("S3_ENDPOINT_URL") or os.getenv("AWS_ENDPOINT_URL_S3") or "https://t3.storageapi.dev").rstrip("/")
+    bucket = os.getenv("S3_BUCKET_NAME") or os.getenv("AWS_STORAGE_BUCKET_NAME") or os.getenv("BUCKET_NAME") or ""
+    endpoint = (os.getenv("S3_ENDPOINT_URL") or os.getenv("AWS_ENDPOINT_URL_S3") or "").rstrip("/")
 
     if s3_secret:
         try:
@@ -2026,8 +2030,8 @@ def payment_create(request):
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    card_number = os.getenv('PAYMENT_CARD_NUMBER', '9860 3501 0244 5532')
-    card_holder = os.getenv('PAYMENT_CARD_HOLDER', 'Asliddin Tursunov')
+    card_number = os.getenv('PAYMENT_CARD_NUMBER', '')
+    card_holder = os.getenv('PAYMENT_CARD_HOLDER', '')
     base_amount = int(os.getenv('BASE_PREMIUM_PRICE', '10000'))
     timeout_minutes = int(os.getenv('PAYMENT_TIMEOUT_MINUTES', '5'))
 
@@ -2160,7 +2164,7 @@ def payment_process_incoming_sms(request):
     Internal endpoint called by Telethon worker when an incoming SMS / notification arrives.
     Extracts amount, matches pending transaction, activates 30 days of Premium, records audit log.
     """
-    expected_secret = os.getenv('PAYMENT_SECRET_KEY', 'ins_pay_internal_secret_2026_x77')
+    expected_secret = os.getenv('PAYMENT_SECRET_KEY', '')
     provided_secret = request.headers.get('X-Payment-Secret') or request.GET.get('secret') or request.data.get('secret')
 
     if provided_secret != expected_secret:
@@ -2258,3 +2262,158 @@ def payment_process_incoming_sms(request):
                 "extracted_amount": amount,
                 "reason": "No active pending transaction matched this exact amount."
             })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def track_bot_activity(request):
+    """
+    Called by the Telegram bot whenever any user interacts with it.
+    Tracks bot users, last active time, username, and links student profile if present.
+    """
+    data = request.data
+    telegram_id = data.get('telegram_id')
+    if not telegram_id:
+        return Response({"error": "telegram_id required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    username = data.get('username') or ''
+    first_name = data.get('first_name') or ''
+    last_name = data.get('last_name') or ''
+
+    student = Student.objects.filter(telegram_id=telegram_id).first()
+
+    bot_user, created = BotUser.objects.get_or_create(
+        telegram_id=telegram_id,
+        defaults={
+            'username': username,
+            'first_name': first_name,
+            'last_name': last_name,
+            'student': student,
+            'is_active': True,
+        }
+    )
+    if not created:
+        bot_user.username = username or bot_user.username
+        bot_user.first_name = first_name or bot_user.first_name
+        bot_user.last_name = last_name or bot_user.last_name
+        if student and not bot_user.student:
+            bot_user.student = student
+        bot_user.is_active = True
+        bot_user.save()
+
+    return Response({"success": True, "created": created})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_admin_stats(request):
+    """
+    Returns complete analytics & statistics for the admin dashboard:
+    - All-time earnings
+    - Current month's earnings
+    - Today's earnings
+    - Monthly purchases and revenue breakdown
+    - Total bot users
+    - Users who accessed the bot today
+    - Active bot users
+    - Active premium students count
+    """
+    api_key = request.headers.get('X-API-KEY') or request.GET.get('api_key')
+    expected_key = os.getenv('API_KEY', '')
+    if expected_key and api_key != expected_key and not (request.user and request.user.is_staff):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    now = timezone.now()
+    today = now.date()
+    current_year = now.year
+    current_month = now.month
+
+    completed_txs = PaymentTransaction.objects.filter(status='completed')
+    total_revenue = completed_txs.aggregate(s=models.Sum('total_amount'))['s'] or 0
+    total_base_revenue = completed_txs.aggregate(s=models.Sum('base_amount'))['s'] or 0
+    total_purchases_count = completed_txs.count()
+
+    month_txs = completed_txs.filter(
+        completed_at__year=current_year, completed_at__month=current_month
+    )
+    month_revenue = month_txs.aggregate(s=models.Sum('total_amount'))['s'] or 0
+    month_purchases_count = month_txs.count()
+
+    today_txs = completed_txs.filter(completed_at__date=today)
+    today_revenue = today_txs.aggregate(s=models.Sum('total_amount'))['s'] or 0
+    today_purchases_count = today_txs.count()
+
+    from django.db.models.functions import TruncMonth
+    monthly_sales_qs = (
+        completed_txs.annotate(month=TruncMonth('completed_at'))
+        .values('month')
+        .annotate(
+            count=models.Count('transaction_id'),
+            total_sum=models.Sum('total_amount'),
+            avg_sum=models.Avg('total_amount'),
+        )
+        .order_by('-month')
+    )
+
+    monthly_sales = [
+        {
+            "month": item['month'].strftime('%Y-%m') if item['month'] else 'N/A',
+            "count": item['count'],
+            "total_amount": item['total_sum'] or 0,
+            "avg_amount": round(item['avg_sum'] or 0),
+        }
+        for item in monthly_sales_qs
+    ]
+
+    total_bot_users = BotUser.objects.count()
+    today_bot_users = BotUser.objects.filter(last_active_at__date=today).count()
+    active_bot_users = BotUser.objects.filter(
+        models.Q(student__isnull=False) | models.Q(last_active_at__gte=now - datetime.timedelta(days=30))
+    ).count()
+
+    total_students = Student.objects.count()
+    linked_students = Student.objects.filter(telegram_id__isnull=False).count()
+    active_premium_students = Student.objects.filter(
+        is_premium=True,
+        premium_expires_at__gt=now
+    ).count()
+
+    return Response({
+        "total_revenue": total_revenue,
+        "total_base_revenue": total_base_revenue,
+        "total_purchases_count": total_purchases_count,
+        "month_revenue": month_revenue,
+        "month_purchases_count": month_purchases_count,
+        "today_revenue": today_revenue,
+        "today_purchases_count": today_purchases_count,
+        "monthly_sales": monthly_sales,
+        "total_bot_users": total_bot_users,
+        "today_bot_users": today_bot_users,
+        "active_bot_users": active_bot_users,
+        "total_students": total_students,
+        "linked_students": linked_students,
+        "active_premium_students": active_premium_students,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_bot_broadcast_recipients(request):
+    """
+    Returns all unique Telegram IDs who can receive broadcast announcements.
+    Combines registered BotUser IDs and Student telegram_ids.
+    """
+    api_key = request.headers.get('X-API-KEY') or request.GET.get('api_key')
+    expected_key = os.getenv('API_KEY', '')
+    if expected_key and api_key != expected_key and not (request.user and request.user.is_staff):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    bot_user_ids = set(BotUser.objects.filter(is_active=True).values_list('telegram_id', flat=True))
+    student_ids = set(Student.objects.filter(telegram_id__isnull=False).values_list('telegram_id', flat=True))
+    all_recipients = list(bot_user_ids.union(student_ids))
+
+    return Response({
+        "total": len(all_recipients),
+        "recipients": all_recipients,
+    })
+

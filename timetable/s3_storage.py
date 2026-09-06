@@ -38,21 +38,21 @@ class S3StorageManager:
             endpoint_url
             or os.getenv("S3_ENDPOINT_URL")
             or os.getenv("AWS_ENDPOINT_URL_S3")
-            or "https://t3.storageapi.dev"
+            or ""
         ).rstrip("/")
         self.region_name = (
             region_name
             or os.getenv("S3_REGION")
             or os.getenv("AWS_REGION")
             or os.getenv("AWS_S3_REGION_NAME")
-            or "auto"
+            or ""
         )
         self.bucket_name = (
             bucket_name
             or os.getenv("S3_BUCKET_NAME")
             or os.getenv("AWS_STORAGE_BUCKET_NAME")
             or os.getenv("BUCKET_NAME")
-            or "resilient-module-m3qmihat"
+            or ""
         )
         self.access_key_id = (
             access_key_id
@@ -60,7 +60,7 @@ class S3StorageManager:
             or os.getenv("AWS_ACCESS_KEY_ID")
             or os.getenv("ACCESS_KEY_ID")
             or os.getenv("TIGRIS_ACCESS_KEY_ID")
-            or "tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ"
+            or ""
         ).strip()
         self.secret_access_key = (
             secret_access_key

@@ -30,6 +30,9 @@ from .views import (
     payment_status,
     payment_cancel,
     payment_process_incoming_sms,
+    track_bot_activity,
+    get_admin_stats,
+    get_bot_broadcast_recipients,
     link_telegram,
     student_homework,
     student_attendance,
@@ -103,6 +106,11 @@ urlpatterns = [
     re_path(r'^payments/(?P<transaction_id>[0-9a-f-]+)/status/?$', payment_status, name='payment_status'),
     re_path(r'^payments/(?P<transaction_id>[0-9a-f-]+)/cancel/?$', payment_cancel, name='payment_cancel'),
     re_path(r'^payments/process-incoming-sms/?$', payment_process_incoming_sms, name='payment_process_incoming_sms'),
+
+    # Admin Analytics & Bot Tracking
+    re_path(r'^admin/stats/?$', get_admin_stats, name='admin_stats'),
+    re_path(r'^bot/track-activity/?$', track_bot_activity, name='track_bot_activity'),
+    re_path(r'^bot/broadcast-recipients/?$', get_bot_broadcast_recipients, name='bot_broadcast_recipients'),
 
     # ModelViewSet CRUD Router
     path('', include(router.urls)),

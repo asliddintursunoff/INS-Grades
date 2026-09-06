@@ -245,7 +245,7 @@ class PaymentTransaction(models.Model):
     salt = models.IntegerField(db_index=True)
     total_amount = models.IntegerField(db_index=True)
     card_number = models.CharField(max_length=30)
-    card_holder = models.CharField(max_length=100, default='Asliddin Tursunov')
+    card_holder = models.CharField(max_length=100, default='', blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(db_index=True)
@@ -288,3 +288,27 @@ class PaymentAuditLog(models.Model):
 
     def __str__(self):
         return f"Audit {self.log_id} - {self.extracted_amount} UZS - Matched: {self.is_matched}"
+
+
+class BotUser(models.Model):
+    telegram_id = models.BigIntegerField(primary_key=True)
+    username = models.CharField(max_length=100, null=True, blank=True)
+    first_name = models.CharField(max_length=255, null=True, blank=True)
+    last_name = models.CharField(max_length=255, null=True, blank=True)
+    student = models.ForeignKey(
+        Student, on_delete=models.SET_NULL, null=True, blank=True, related_name='bot_users'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_active_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'bot_users'
+        ordering = ['-last_active_at']
+        verbose_name = 'Bot User'
+        verbose_name_plural = 'Bot Users'
+
+    def __str__(self):
+        name = self.first_name or self.username or str(self.telegram_id)
+        return f"{name} ({self.telegram_id})"
+

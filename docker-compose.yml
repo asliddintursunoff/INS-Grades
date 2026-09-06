@@ -9,21 +9,21 @@ services:
       - "8000:3000"
     environment:
       - PORT=3000
-      - DJANGO_SECRET_KEY=django-insecure-ins-grades-secret-key-change-in-production
-      - DEBUG=True
-      - ALLOWED_HOSTS=*
-      - DB_HOST=postgres.railway.internal
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=your_password_here
-      - DB_NAME=railway
-      - DB_SSLMODE=prefer
-      - API_KEY=ins_secure_api_key_2026_x89a
-      - TELEGRAM_BOT_TOKEN=your_token_here
-      - S3_ENDPOINT_URL=https://t3.storageapi.dev
-      - S3_REGION=auto
-      - S3_BUCKET_NAME=resilient-module-m3qmihat
-      - S3_ACCESS_KEY_ID=tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-}
+      - DEBUG=${DEBUG:-True}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - DB_HOST=${DB_HOST:-postgres.railway.internal}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-}
+      - DB_NAME=${DB_NAME:-railway}
+      - DB_SSLMODE=${DB_SSLMODE:-prefer}
+      - API_KEY=${API_KEY:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-}
+      - S3_REGION=${S3_REGION:-auto}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
     restart: unless-stopped
 
@@ -34,7 +34,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     restart: unless-stopped
 
   bot:
@@ -42,14 +42,14 @@ services:
       context: ./bot
       dockerfile: Dockerfile
     environment:
-      - TELEGRAM_BOT_TOKEN=your_token_here
-      - API_URL=http://backend:3000
-      - API_KEY=ins_secure_api_key_2026_x89a
-      - APP_URL=https://ins-grades.vercel.app
-      - S3_ENDPOINT_URL=https://t3.storageapi.dev
-      - S3_REGION=auto
-      - S3_BUCKET_NAME=resilient-module-m3qmihat
-      - S3_ACCESS_KEY_ID=tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - API_URL=${API_URL:-http://backend:3000}
+      - API_KEY=${API_KEY:-}
+      - APP_URL=${APP_URL:-}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-}
+      - S3_REGION=${S3_REGION:-auto}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
     depends_on:
       - backend
@@ -61,12 +61,12 @@ services:
       dockerfile: Dockerfile
     environment:
       - DATABASE_URL=${DATABASE_URL:-}
-      - EDUPAGE_URL=https://iut.edupage.org
-      - CAPTURE_SCREENSHOTS=true
-      - S3_ENDPOINT_URL=https://t3.storageapi.dev
-      - S3_REGION=auto
-      - S3_BUCKET_NAME=resilient-module-m3qmihat
-      - S3_ACCESS_KEY_ID=tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ
+      - EDUPAGE_URL=${EDUPAGE_URL:-https://iut.edupage.org}
+      - CAPTURE_SCREENSHOTS=${CAPTURE_SCREENSHOTS:-true}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-}
+      - S3_REGION=${S3_REGION:-auto}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
     profiles:
       - tools
@@ -76,9 +76,9 @@ services:
       context: ./notifier
       dockerfile: Dockerfile
     environment:
-      - TELEGRAM_BOT_TOKEN=your_token_here
-      - API_URL=http://backend:3000
-      - API_KEY=ins_secure_api_key_2026_x89a
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - API_URL=${API_URL:-http://backend:3000}
+      - API_KEY=${API_KEY:-}
     depends_on:
       - backend
     restart: unless-stopped
@@ -91,11 +91,12 @@ services:
       - TELEGRAM_API_ID=${TELEGRAM_API_ID:-}
       - TELEGRAM_API_HASH=${TELEGRAM_API_HASH:-}
       - TELETHON_SESSION_STRING=${TELETHON_SESSION_STRING:-}
-      - BACKEND_API_URL=http://backend:3000
-      - PAYMENT_SECRET_KEY=ins_pay_internal_secret_2026_x77
-      - ALLOWED_SMS_SENDERS=humocardbot
-      - TELEGRAM_BOT_TOKEN=your_token_here
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://backend:3000}
+      - PAYMENT_SECRET_KEY=${PAYMENT_SECRET_KEY:-}
+      - ALLOWED_SMS_SENDERS=${ALLOWED_SMS_SENDERS:-humocardbot}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - ADMIN_TELEGRAM_ID=${ADMIN_TELEGRAM_ID:-}
     depends_on:
       - backend
     restart: unless-stopped
+

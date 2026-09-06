@@ -24,7 +24,7 @@ API_ID = os.getenv("TELEGRAM_API_ID")
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 SESSION_STRING = os.getenv("TELETHON_SESSION_STRING")
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:3000").rstrip("/")
-PAYMENT_SECRET_KEY = os.getenv("PAYMENT_SECRET_KEY", "ins_pay_internal_secret_2026_x77")
+PAYMENT_SECRET_KEY = os.getenv("PAYMENT_SECRET_KEY", "")
 ALLOWED_SMS_SENDERS = [
     s.strip().lstrip("@").lower()
     for s in os.getenv("ALLOWED_SMS_SENDERS", "humocardbot").split(",")
