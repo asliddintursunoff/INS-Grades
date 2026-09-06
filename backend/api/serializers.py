@@ -48,6 +48,11 @@ class StudentSerializer(serializers.ModelSerializer):
     group = GroupSerializer(read_only=True)
     group_name = serializers.CharField(source='group.group_name', read_only=True)
     timetable_image_url = serializers.CharField(source='group.timetable_image_url', read_only=True, default='')
+    is_premium = serializers.BooleanField(source='has_premium', read_only=True)
+    plan = serializers.SerializerMethodField()
+
+    def get_plan(self, obj):
+        return 'premium' if getattr(obj, 'has_premium', False) else 'free'
 
     class Meta:
         model = Student
@@ -60,6 +65,9 @@ class StudentSerializer(serializers.ModelSerializer):
             'year_of_study',
             'telegram_id',
             'telegram_username',
+            'is_premium',
+            'plan',
+            'premium_expires_at',
         ]
 
 

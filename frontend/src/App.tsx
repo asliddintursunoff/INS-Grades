@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Settings, Calendar, Database, AlertCircle, RefreshCw } from 'lucide-react';
+import { BookOpen, Settings, Calendar, Database, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { ClassesTab } from './components/ClassesTab';
 import { SettingsTab } from './components/SettingsTab';
 import { TimetableTab } from './components/TimetableTab';
+import { PremiumTab } from './components/PremiumTab';
+import { PremiumModal } from './components/PremiumModal';
 import { Student } from './types';
 import { apiCall, getTelegramUser } from './api';
 
-type TabKey = 'timetable' | 'classes' | 'settings';
+type TabKey = 'timetable' | 'classes' | 'premium' | 'settings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('timetable');
@@ -15,6 +17,10 @@ export default function App() {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [systemStatus, setSystemStatus] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Premium modal state
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [premiumLockReason, setPremiumLockReason] = useState<string | null>(null);
 
   // Initialize Telegram WebApp SDK if opened in Telegram
   useEffect(() => {
@@ -42,8 +48,13 @@ export default function App() {
       apiCall<{ found: boolean; student?: Student }>(`/api/auth/me/${tgUser.id}`)
         .then((res) => {
           if (res.found && res.student) {
-            setCurrentStudent(res.student);
+            const stud = res.student;
+            setCurrentStudent(stud);
             setNotRegistered(false);
+            // Auto open premium offer for Free users when opening mini app
+            if (!stud.is_premium && stud.plan !== 'premium') {
+              setShowPremiumModal(true);
+            }
           } else {
             setCurrentStudent(null);
             setNotRegistered(true);
@@ -63,7 +74,11 @@ export default function App() {
         const list = res.students || [];
         setStudents(list);
         if (list.length > 0) {
-          setCurrentStudent(list[0]);
+          const first = list[0];
+          setCurrentStudent(first);
+          if (!first.is_premium && first.plan !== 'premium') {
+            setShowPremiumModal(true);
+          }
         }
       })
       .catch((err) => console.error('Failed to load students:', err))
@@ -81,19 +96,32 @@ export default function App() {
 
   const botUsername = systemStatus?.bot_username || 'INS_gradesbot';
 
+  const handleRequirePremium = (reason: string) => {
+    setPremiumLockReason(reason);
+    setShowPremiumModal(true);
+  };
+
+  const isStudentPremium = currentStudent?.is_premium || currentStudent?.plan === 'premium';
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* Top Navigation */}
-      <Navbar currentStudent={currentStudent} />
+      <Navbar
+        currentStudent={currentStudent}
+        onOpenPremium={() => {
+          setPremiumLockReason(null);
+          setShowPremiumModal(true);
+        }}
+      />
 
       {/* Main Container */}
       <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-5 overflow-x-hidden">
         {/* Navigation Tabs */}
         <div className="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-2xs w-full max-w-full">
-          <nav className="grid grid-cols-3 gap-1" aria-label="Tabs">
+          <nav className="grid grid-cols-4 gap-1" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('timetable')}
-              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
                 activeTab === 'timetable'
                   ? 'bg-blue-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -105,7 +133,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('classes')}
-              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
                 activeTab === 'classes'
                   ? 'bg-blue-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -116,8 +144,22 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => setActiveTab('premium')}
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+                activeTab === 'premium'
+                  ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-2xs'
+                  : isStudentPremium
+                  ? 'text-amber-800 hover:text-amber-950 hover:bg-amber-50/60'
+                  : 'text-amber-600 hover:text-amber-800 hover:bg-amber-50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-amber-500" />
+              <span className="truncate font-black">⭐ Premium</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('settings')}
-              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
                 activeTab === 'settings'
                   ? 'bg-blue-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -137,6 +179,8 @@ export default function App() {
                 key={`timetable-${currentStudent.student_id}-${refreshTrigger}`}
                 studentId={currentStudent.student_id}
                 onRefreshTrigger={handleDataChanged}
+                isPremium={isStudentPremium}
+                onRequirePremium={handleRequirePremium}
               />
             )}
 
@@ -145,6 +189,16 @@ export default function App() {
                 key={`classes-${currentStudent.student_id}-${refreshTrigger}`}
                 studentId={currentStudent.student_id}
                 onClassesUpdated={handleDataChanged}
+                isPremium={isStudentPremium}
+                onRequirePremium={handleRequirePremium}
+              />
+            )}
+
+            {activeTab === 'premium' && (
+              <PremiumTab
+                key={`premium-${currentStudent.student_id}-${refreshTrigger}`}
+                student={currentStudent}
+                onPremiumUpdated={fetchInitialData}
               />
             )}
 
@@ -153,6 +207,8 @@ export default function App() {
                 key={`settings-${currentStudent.student_id}`}
                 student={currentStudent}
                 botUsername={botUsername}
+                isPremium={isStudentPremium}
+                onRequirePremium={handleRequirePremium}
               />
             )}
           </div>
@@ -267,22 +323,33 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500 w-full max-w-full overflow-hidden">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+      <footer className="border-t border-slate-200 bg-white py-3.5 text-center text-xs text-slate-500 w-full max-w-full overflow-hidden">
+        <div className="max-w-5xl mx-auto px-4 flex items-center justify-between gap-2 text-center sm:text-left">
           <div className="flex items-center gap-2">
             <span className="font-black text-blue-700 tracking-tight">INS grades</span>
             <span>•</span>
-            <span className="text-slate-600 font-medium">Student Timetable &amp; Make-up Portal</span>
+            <span className="text-slate-500 font-medium">Student Timetable Portal</span>
           </div>
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="text-slate-400 font-normal">developed with precision</span>
-            <span>•</span>
-            <span className="text-blue-600 font-semibold hover:underline">
-              powered by @asliddin_tursunoff
-            </span>
+          <div className="text-[11px] text-slate-400">
+            Official Academic System
           </div>
         </div>
       </footer>
+
+      {/* Global Premium Modal */}
+      {currentStudent && (
+        <PremiumModal
+          isOpen={showPremiumModal}
+          onClose={() => {
+            setShowPremiumModal(false);
+            setPremiumLockReason(null);
+          }}
+          studentId={currentStudent.student_id}
+          isPremium={isStudentPremium}
+          onPremiumUpdated={fetchInitialData}
+          lockReason={premiumLockReason}
+        />
+      )}
     </div>
   );
 }

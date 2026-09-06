@@ -5,6 +5,9 @@ export interface Student {
   telegram_username: string | null;
   group_name: string;
   year_of_study?: number;
+  is_premium?: boolean;
+  plan?: 'free' | 'premium';
+  premium_expires_at?: string | null;
 }
 
 export interface StudentClass {
@@ -50,6 +53,8 @@ export interface TimetableResponse {
   group_name: string;
   timetable_image_url: string;
   schedule: ScheduleSlot[];
+  is_premium?: boolean;
+  plan?: 'free' | 'premium';
 }
 
 export interface GroupTimeSlot {

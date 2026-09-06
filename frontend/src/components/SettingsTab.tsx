@@ -6,10 +6,17 @@ import { apiCall } from '../api';
 interface SettingsTabProps {
   student: Student;
   botUsername: string;
+  isPremium?: boolean;
+  onRequirePremium?: (featureName: string) => void;
 }
 
-export const SettingsTab: React.FC<SettingsTabProps> = ({ student, botUsername }) => {
-  const [settings, setSettings] = useState<NotificationSettings>({ enabled: true, minutes_before: 30 });
+export const SettingsTab: React.FC<SettingsTabProps> = ({
+  student,
+  botUsername,
+  isPremium = false,
+  onRequirePremium,
+}) => {
+  const [settings, setSettings] = useState<NotificationSettings>({ enabled: false, minutes_before: 30 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
@@ -19,15 +26,22 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ student, botUsername }
     apiCall<NotificationSettings>(`/api/students/${student.student_id}/notification-settings/`)
       .then((res) => {
         setSettings({
-          enabled: res.enabled !== undefined ? res.enabled : true,
+          enabled: isPremium ? (res.enabled !== undefined ? res.enabled : true) : false,
           minutes_before: res.minutes_before || 30,
         });
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [student.student_id]);
+  }, [student.student_id, isPremium]);
 
   const updateSettings = async (newSettings: Partial<NotificationSettings>) => {
+    if (!isPremium && newSettings.enabled) {
+      if (onRequirePremium) {
+        onRequirePremium("Dars eslatmalarini Telegram orqali avtomatik olish");
+      }
+      return;
+    }
+
     const updated = { ...settings, ...newSettings };
     setSettings(updated);
     setSaving(true);
@@ -72,11 +86,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ student, botUsername }
               {settings.enabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
             </div>
             <div>
-              <div className="text-sm font-bold text-slate-900">
-                Receive Class Reminders
+              <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>Receive Class Reminders</span>
+                {!isPremium && (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 border border-amber-300">
+                    PREMIUM ⭐
+                  </span>
+                )}
               </div>
               <div className="text-xs text-slate-500">
-                {settings.enabled ? 'Active: Telegram bot sends automated class alerts' : 'Disabled: Alerts are muted'}
+                {isPremium
+                  ? (settings.enabled ? 'Active: Telegram bot sends automated class alerts' : 'Disabled: Alerts are muted')
+                  : 'Faqat Premium foydalanuvchilar uchun mavjud (10 000 so\'m/oyiga)'}
               </div>
             </div>
           </div>

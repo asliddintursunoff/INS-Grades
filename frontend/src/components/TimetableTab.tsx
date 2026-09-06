@@ -21,12 +21,21 @@ import { apiCall } from '../api';
 interface TimetableTabProps {
   studentId: string;
   onRefreshTrigger?: () => void;
+  isPremium?: boolean;
+  onRequirePremium?: (featureName: string) => void;
 }
 
-export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefreshTrigger }) => {
+export const TimetableTab: React.FC<TimetableTabProps> = ({
+  studentId,
+  onRefreshTrigger,
+  isPremium,
+  onRequirePremium,
+}) => {
   const [data, setData] = useState<TimetableResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null); // null = all days
+
+  const studentHasPremium = isPremium ?? data?.is_premium ?? false;
 
   // Other slots / Group switch modal state
   const [activeSubjectSlot, setActiveSubjectSlot] = useState<ScheduleSlot | null>(null);
@@ -62,6 +71,13 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
 
   // Open modal to see all slots for class / switch section
   const handleOpenSlotsModal = async (slot: ScheduleSlot) => {
+    if (!studentHasPremium) {
+      if (onRequirePremium) {
+        onRequirePremium("Dars vaqtlarini o'zgartirish (Make-up darslar va Doimiy almashtirish)");
+      }
+      return;
+    }
+
     setActiveSubjectSlot(slot);
     setLoadingSlots(true);
     setFeedbackMessage(null);
@@ -85,6 +101,13 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
 
   // Revert one-time make-up slot or permanent switch back to primary group
   const handleRevertSlot = async (slot: ScheduleSlot) => {
+    if (!studentHasPremium) {
+      if (onRequirePremium) {
+        onRequirePremium("Dars jadvalini o'zgartirish");
+      }
+      return;
+    }
+
     try {
       setLoading(true);
       await apiCall<{ success: boolean; message: string }>(

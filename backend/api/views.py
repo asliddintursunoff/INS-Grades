@@ -798,6 +798,8 @@ def get_student_timetable(request, student_id):
         "timetable_image_url": image_url,
         "schedule": schedule,
         "timetable": schedule,
+        "is_premium": getattr(student, 'has_premium', False),
+        "plan": "premium" if getattr(student, 'has_premium', False) else "free",
     })
 
 
@@ -860,6 +862,14 @@ def student_drop_class(request, student_id):
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    if not getattr(student, 'has_premium', False):
+        return Response({
+            "error": "Kursni bekor qilish (Drop) faqat Premium foydalanuvchilar uchun mavjud.",
+            "requires_premium": True,
+            "plan": "free",
+            "price": "10 000 so'm/oyiga"
+        }, status=status.HTTP_403_FORBIDDEN)
+
     class_id = request.data.get('class_id')
     subject_id = request.data.get('subject_id')
     if not class_id and not subject_id:
@@ -896,6 +906,14 @@ def student_retake_class(request, student_id):
     student = resolve_student_obj(student_id)
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not getattr(student, 'has_premium', False):
+        return Response({
+            "error": "Kursni qayta o'qish (Retake) faqat Premium foydalanuvchilar uchun mavjud.",
+            "requires_premium": True,
+            "plan": "free",
+            "price": "10 000 so'm/oyiga"
+        }, status=status.HTTP_403_FORBIDDEN)
 
     class_id = request.data.get('class_id')
     if not class_id:
@@ -1017,6 +1035,14 @@ def student_enroll_retake(request, student_id):
     student = resolve_student_obj(student_id)
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not getattr(student, 'has_premium', False):
+        return Response({
+            "error": "Retake kursga yozilish faqat Premium foydalanuvchilar uchun mavjud.",
+            "requires_premium": True,
+            "plan": "free",
+            "price": "10 000 so'm/oyiga"
+        }, status=status.HTTP_403_FORBIDDEN)
 
     class_id = request.data.get('class_id')
     if not class_id:
@@ -1290,6 +1316,14 @@ def student_change_group(request, student_id):
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    if not getattr(student, 'has_premium', False):
+        return Response({
+            "error": "Dars jadvali va vaqtini o'zgartirish faqat Premium foydalanuvchilar uchun mavjud.",
+            "requires_premium": True,
+            "plan": "free",
+            "price": "10 000 so'm/oyiga"
+        }, status=status.HTTP_403_FORBIDDEN)
+
     new_class_id = request.data.get('new_class_id')
     change_type = request.data.get('change_type', 'permanent')
     target_slot_id = request.data.get('target_slot_id')
@@ -1412,6 +1446,14 @@ def student_revert_override(request, student_id):
     student = resolve_student_obj(student_id)
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not getattr(student, 'has_premium', False):
+        return Response({
+            "error": "Dars jadvalini o'zgartirish faqat Premium foydalanuvchilar uchun mavjud.",
+            "requires_premium": True,
+            "plan": "free",
+            "price": "10 000 so'm/oyiga"
+        }, status=status.HTTP_403_FORBIDDEN)
 
     subject_id = request.data.get('subject_id')
     slot_id = request.data.get('slot_id') or request.data.get('original_slot_id')
@@ -1558,6 +1600,16 @@ def student_notification_settings(request, student_id):
     if request.method in ('POST', 'PATCH'):
         enabled = request.data.get('enabled')
         minutes_before = request.data.get('minutes_before')
+
+        if enabled:
+            if not getattr(student, 'has_premium', False):
+                return Response({
+                    "error": "Telegram orqali dars eslatmalarini yoqish faqat Premium foydalanuvchilar uchun mavjud.",
+                    "requires_premium": True,
+                    "plan": "free",
+                    "price": "10 000 so'm/oyiga"
+                }, status=status.HTTP_403_FORBIDDEN)
+
         if enabled is not None:
             setting.enabled = 1 if enabled else 0
         if minutes_before is not None:
@@ -1567,6 +1619,56 @@ def student_notification_settings(request, student_id):
     return Response({
         "enabled": bool(setting.enabled),
         "minutes_before": setting.minutes_before,
+        "is_premium": getattr(student, 'has_premium', False),
+    })
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def student_premium_manage(request, student_id):
+    """View and manage subscription plan for a student."""
+    student = resolve_student_obj(student_id)
+    if not student:
+        return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'POST':
+        action = request.data.get('action')
+        is_premium_val = request.data.get('is_premium')
+        duration_days = int(request.data.get('duration_days', 30))
+
+        if action == 'deactivate' or is_premium_val is False:
+            student.is_premium = False
+            student.premium_expires_at = None
+            student.save()
+            msg = "Premium obunasi bekor qilindi (Free tarif)."
+        else:
+            student.is_premium = True
+            student.premium_expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=duration_days)
+            student.save()
+            msg = f"Premium tarif muvaffaqiyatli faollashtirildi ({duration_days} kunga)."
+
+        return Response({
+            "success": True,
+            "message": msg,
+            "student_id": student.student_id,
+            "is_premium": student.has_premium,
+            "plan": "premium" if student.has_premium else "free",
+            "premium_expires_at": student.premium_expires_at.isoformat() if student.premium_expires_at else None,
+            "price": "10 000 so'm/oyiga"
+        })
+
+    return Response({
+        "student_id": student.student_id,
+        "student_name": student.full_name,
+        "is_premium": student.has_premium,
+        "plan": "premium" if student.has_premium else "free",
+        "price": "10 000 so'm/oyiga",
+        "premium_expires_at": student.premium_expires_at.isoformat() if student.premium_expires_at else None,
+        "features": [
+            "Dars vaqtlarini o'zgartirish (Make-up va Doimiy almashtirish)",
+            "Retake va Drop kurslarni boshqarish",
+            "Telegram avtomatik dars eslatmalari",
+        ]
     })
 
 
@@ -1709,9 +1811,10 @@ def get_pending_class_alerts(request):
             "server_time": now.strftime("%Y-%m-%d %H:%M:%S")
         })
 
-    # Query active students with telegram_id
+    # Query active students with telegram_id who are on PREMIUM plan
     students = Student.objects.filter(
-        telegram_id__isnull=False
+        telegram_id__isnull=False,
+        is_premium=True
     ).select_related('group', 'notification_settings')
 
     # Prefetch sent logs for today to avoid N+1 queries
@@ -1724,6 +1827,10 @@ def get_pending_class_alerts(request):
     pending_alerts = []
 
     for student in students:
+        # Extra verification for active premium period
+        if not getattr(student, 'has_premium', False):
+            continue
+
         # Check settings
         notif_setting = getattr(student, 'notification_settings', None)
         if notif_setting and not notif_setting.enabled:

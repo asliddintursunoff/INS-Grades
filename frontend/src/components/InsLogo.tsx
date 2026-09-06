@@ -39,22 +39,9 @@ export const InsLogo: React.FC<InsLogoProps> = ({ size = 'md', showSubtitle = tr
       </div>
 
       <div className="flex flex-col">
-        <div className="flex items-center gap-2">
-          <h1 className={`${titleSizes[size]} tracking-tight text-slate-900 leading-none`}>
-            INS grades
-          </h1>
-          <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-200">
-            PRO
-          </span>
-        </div>
-
-        {showSubtitle && (
-          <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500">
-            <span>Student Portal</span>
-            <span>•</span>
-            <span className="text-blue-600 font-medium">powered by @asliddin_tursunoff</span>
-          </div>
-        )}
+        <h1 className={`${titleSizes[size]} tracking-tight text-slate-900 leading-none`}>
+          INS grades
+        </h1>
       </div>
     </div>
   );

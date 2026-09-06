@@ -20,9 +20,16 @@ import { RetakeCourseModal } from './RetakeCourseModal';
 interface ClassesTabProps {
   studentId: string;
   onClassesUpdated?: () => void;
+  isPremium?: boolean;
+  onRequirePremium?: (featureName: string) => void;
 }
 
-export const ClassesTab: React.FC<ClassesTabProps> = ({ studentId, onClassesUpdated }) => {
+export const ClassesTab: React.FC<ClassesTabProps> = ({
+  studentId,
+  onClassesUpdated,
+  isPremium = false,
+  onRequirePremium,
+}) => {
   const [classes, setClasses] = useState<StudentClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -125,7 +132,13 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({ studentId, onClassesUpda
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowRetakeModal(true)}
+            onClick={() => {
+              if (!isPremium && onRequirePremium) {
+                onRequirePremium("Qayta o'qish (Retake) kurslarni qo'shish");
+              } else {
+                setShowRetakeModal(true);
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs shrink-0"
           >
             <RotateCcw className="w-4 h-4" />
@@ -230,7 +243,13 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({ studentId, onClassesUpda
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
                   <button
                     disabled={actionLoadingId === c.class_id}
-                    onClick={() => setDropConfirmClass(c)}
+                    onClick={() => {
+                      if (!isPremium && onRequirePremium) {
+                        onRequirePremium("Kursni bekor qilish (Drop)");
+                      } else {
+                        setDropConfirmClass(c);
+                      }
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-colors disabled:opacity-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -289,7 +308,13 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({ studentId, onClassesUpda
                 <div className="pt-2.5 border-t border-slate-200/60 flex items-center justify-end">
                   <button
                     disabled={actionLoadingId === c.class_id}
-                    onClick={() => handleQuickRetake(c)}
+                    onClick={() => {
+                      if (!isPremium && onRequirePremium) {
+                        onRequirePremium("Kursni qayta tiklash (Re-enroll)");
+                      } else {
+                        handleQuickRetake(c);
+                      }
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-2xs"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />

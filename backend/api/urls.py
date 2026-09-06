@@ -23,6 +23,7 @@ from .views import (
     session_makeup_options,
     session_record_makeup,
     student_notification_settings,
+    student_premium_manage,
     get_pending_class_alerts,
     mark_class_alert_sent,
     link_telegram,
@@ -89,6 +90,9 @@ urlpatterns = [
     re_path(r'^notification-settings/(?P<student_id>[^/]+)/?$', student_notification_settings, name='notification_settings_legacy_direct'),
     re_path(r'^notifications/pending-alerts/?$', get_pending_class_alerts, name='pending_class_alerts'),
     re_path(r'^notifications/mark-sent/?$', mark_class_alert_sent, name='mark_class_alert_sent'),
+
+    # Subscription & Premium Plan
+    re_path(r'^students/(?P<student_id>[^/]+)/premium/?$', student_premium_manage, name='student_premium_manage'),
 
     # ModelViewSet CRUD Router
     path('', include(router.urls)),

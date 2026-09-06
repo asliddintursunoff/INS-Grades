@@ -35,11 +35,24 @@ class Student(models.Model):
     year_of_study = models.IntegerField(default=2)
     telegram_id = models.BigIntegerField(unique=True, null=True, blank=True)
     telegram_username = models.CharField(max_length=100, null=True, blank=True)
+    is_premium = models.BooleanField(default=False)
+    premium_expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'students'
         verbose_name = 'Student'
         verbose_name_plural = 'Students'
+
+    @property
+    def has_premium(self):
+        if not self.is_premium:
+            return False
+        if self.premium_expires_at:
+            import datetime
+            now_utc = datetime.datetime.now(datetime.timezone.utc)
+            if self.premium_expires_at < now_utc:
+                return False
+        return True
 
     def __str__(self):
         return f"{self.full_name} ({self.student_id})"
