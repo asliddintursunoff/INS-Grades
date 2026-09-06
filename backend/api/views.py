@@ -26,6 +26,7 @@ from .models import (
     Attendance,
     NotificationSettings,
     SentNotification,
+    ClassNotificationLog,
 )
 from .serializers import (
     ProfessorSerializer,
@@ -585,18 +586,10 @@ class StudentViewSet(viewsets.ModelViewSet):
         return qs
 
 
-# Specialized Timetable & Student Operations
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_student_timetable(request, student_id):
-    """Retrieve full weekly schedule with overrides and S3 photo for a student."""
-    student = resolve_student_obj(student_id)
-    if not student:
-        return Response({"error": f"Student not found: {student_id}"}, status=status.HTTP_404_NOT_FOUND)
-
+def build_student_schedule_list(student):
+    """Computes the effective weekly timetable for a student, handling overrides, dropped classes, and retakes."""
     group = student.group
     group_name = group.group_name if group else ""
-    image_url = get_group_s3_url(group_name, group.timetable_image_url if group else None)
 
     # 1. Dropped class IDs and subjects for this student
     dropped_class_ids = set(
@@ -768,7 +761,6 @@ def get_student_timetable(request, student_id):
 
     schedule.sort(key=lambda x: (x["day_of_week"], x["start_time"]))
 
-    # Calculate session numbers for multi-session subjects (e.g. Session 1 of 2)
     subj_counts = {}
     for item in schedule:
         sid = item["subject_id"]
@@ -780,6 +772,23 @@ def get_student_timetable(request, student_id):
         subj_curr[sid] = subj_curr.get(sid, 0) + 1
         item["session_number"] = subj_curr[sid]
         item["total_sessions"] = subj_counts[sid]
+
+    return schedule
+
+
+# Specialized Timetable & Student Operations
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_student_timetable(request, student_id):
+    """Retrieve full weekly schedule with overrides and S3 photo for a student."""
+    student = resolve_student_obj(student_id)
+    if not student:
+        return Response({"error": f"Student not found: {student_id}"}, status=status.HTTP_404_NOT_FOUND)
+
+    group = student.group
+    group_name = group.group_name if group else ""
+    image_url = get_group_s3_url(group_name, group.timetable_image_url if group else None)
+    schedule = build_student_schedule_list(student)
 
     return Response({
         "student": StudentSerializer(student).data,
@@ -1655,3 +1664,143 @@ def student_attendance(request, student_id):
 
 # Direct alias to avoid re-wrapping Request in Request
 notification_settings = student_notification_settings
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_pending_class_alerts(request):
+    """
+    Returns pending class reminder alerts that should be dispatched right now.
+    Evaluates students with registered Telegram IDs in Asia/Tashkent timezone.
+    Filters by individual student's chosen minutes_before setting.
+    Idempotent: skips any class already marked sent in ClassNotificationLog for today.
+    """
+    sim_time_param = request.query_params.get('simulated_time')
+    if sim_time_param:
+        try:
+            now = datetime.datetime.fromisoformat(sim_time_param)
+        except Exception:
+            now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
+    else:
+        try:
+            from zoneinfo import ZoneInfo
+            now = datetime.datetime.now(ZoneInfo("Asia/Tashkent"))
+        except Exception:
+            now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
+
+    current_day = now.isoweekday()  # 1=Monday ... 7=Sunday
+    today_date = now.date()
+    today_date_str = today_date.isoformat()
+    current_minutes = now.hour * 60 + now.minute
+
+    # On Sunday, universities are closed - no alerts needed
+    if current_day == 7:
+        return Response({
+            "alerts": [],
+            "status": "sunday_off",
+            "server_time": now.strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+    # Between 21:00 and 07:00, no classes take place
+    if now.hour < 7 or now.hour >= 21:
+        return Response({
+            "alerts": [],
+            "status": "outside_lecture_hours",
+            "server_time": now.strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+    # Query active students with telegram_id
+    students = Student.objects.filter(
+        telegram_id__isnull=False
+    ).select_related('group', 'notification_settings')
+
+    # Prefetch sent logs for today to avoid N+1 queries
+    sent_logs = set(
+        ClassNotificationLog.objects.filter(
+            notification_date=today_date
+        ).values_list('student_id', 'slot_key')
+    )
+
+    pending_alerts = []
+
+    for student in students:
+        # Check settings
+        notif_setting = getattr(student, 'notification_settings', None)
+        if notif_setting and not notif_setting.enabled:
+            continue
+
+        minutes_before = notif_setting.minutes_before if notif_setting else 30
+
+        # Compute student schedule
+        schedule = build_student_schedule_list(student)
+
+        # Check today's slots
+        for slot in schedule:
+            if slot.get('day_of_week') != current_day:
+                continue
+
+            time_parts = str(slot.get('start_time', '')).strip().split(':')
+            if len(time_parts) < 2:
+                continue
+
+            slot_start_min = int(time_parts[0]) * 60 + int(time_parts[1])
+            diff_min = slot_start_min - current_minutes
+
+            # Trigger alert when diff is within the target window (e.g. within [0, minutes_before])
+            if 0 <= diff_min <= minutes_before:
+                slot_key = f"{slot['subject_short']}_{slot['start_time']}_{current_day}"
+                if (student.student_id, slot_key) in sent_logs:
+                    continue
+
+                pending_alerts.append({
+                    "student_id": student.student_id,
+                    "student_name": student.full_name,
+                    "telegram_id": student.telegram_id,
+                    "subject_full": slot['subject_full'],
+                    "subject_short": slot['subject_short'],
+                    "professor": slot['professor'],
+                    "room": slot['room'],
+                    "actual_group": slot['actual_group'],
+                    "day_name": slot['day_name'],
+                    "start_time": slot['start_time'],
+                    "end_time": slot['end_time'],
+                    "minutes_left": diff_min,
+                    "is_one_time": slot.get('is_one_time', False),
+                    "slot_key": slot_key,
+                    "notification_date": today_date_str,
+                })
+
+    return Response({
+        "alerts": pending_alerts,
+        "count": len(pending_alerts),
+        "server_time": now.strftime("%Y-%m-%d %H:%M:%S")
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def mark_class_alert_sent(request):
+    """Records delivery of a class reminder to prevent duplicate messages."""
+    student_id = request.data.get('student_id')
+    slot_key = request.data.get('slot_key')
+    notification_date_str = request.data.get('notification_date')
+
+    if not student_id or not slot_key:
+        return Response({"error": "student_id and slot_key are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    student = resolve_student_obj(student_id)
+    if not student:
+        return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        n_date = datetime.date.fromisoformat(notification_date_str) if notification_date_str else datetime.date.today()
+    except ValueError:
+        n_date = datetime.date.today()
+
+    ClassNotificationLog.objects.get_or_create(
+        student=student,
+        notification_date=n_date,
+        slot_key=slot_key
+    )
+
+    return Response({"success": True, "message": "Alert marked as sent"})

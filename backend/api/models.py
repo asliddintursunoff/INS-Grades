@@ -200,3 +200,17 @@ class SentNotification(models.Model):
         db_table = 'sent_notifications'
         verbose_name = 'Sent Notification'
         verbose_name_plural = 'Sent Notifications'
+
+
+class ClassNotificationLog(models.Model):
+    id = models.AutoField(primary_key=True)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, db_column='student_id', related_name='class_reminders')
+    notification_date = models.DateField()
+    slot_key = models.CharField(max_length=100)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'class_notification_logs'
+        unique_together = ('student', 'notification_date', 'slot_key')
+        verbose_name = 'Class Notification Log'
+        verbose_name_plural = 'Class Notification Logs'

@@ -70,3 +70,15 @@ services:
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
     profiles:
       - tools
+
+  notifier:
+    build:
+      context: ./notifier
+      dockerfile: Dockerfile
+    environment:
+      - TELEGRAM_BOT_TOKEN=your_token_here
+      - API_URL=http://backend:3000
+      - API_KEY=ins_secure_api_key_2026_x89a
+    depends_on:
+      - backend
+    restart: unless-stopped
