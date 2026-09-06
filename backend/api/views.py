@@ -1976,9 +1976,15 @@ def extract_uzs_amount(text: str, base_amount: int = 10000) -> Optional[int]:
     ):
         return None
 
+    # Strip card numbers (e.g. 8600 **** **** 1234 or 8600123456781234)
+    clean_text = re.sub(r'\b(?:\d{4}[\s\*-]?){4}\b', ' ', text)
+    # Strip phone numbers (e.g. +998901234567, +998 90 123 45 67, 998901234567)
+    clean_text = re.sub(r'\+?998[\s\.-]?\d{2}[\s\.-]?\d{3}[\s\.-]?\d{2}[\s\.-]?\d{2}\b', ' ', clean_text)
+    clean_text = re.sub(r'\+\d{9,15}\b', ' ', clean_text)
+
     # 1. Priority 1: Deposit lines with '+' or '➕' (e.g. Humo/Uzcard notifications: '➕ 10.216,00 UZS')
     # Matches '➕ 10.216,00 UZS', '+ 10.216,00 UZS', '➕10216 UZS', '+10150'
-    plus_matches = re.findall(r'[➕\+]\s*([\d\s\.]+)(?:,\d{2})?\s*(?:uzs|so\'?m|som)?', text, re.IGNORECASE)
+    plus_matches = re.findall(r'[➕\+]\s*([\d\s\.]+)(?:,\d{2})?\s*(?:uzs|so\'?m|som)?', clean_text, re.IGNORECASE)
     for match in plus_matches:
         # Humo uses '.' as thousands separator: 10.216 -> 10216
         cleaned = re.sub(r'[\s\.]', '', match.strip())
@@ -1986,12 +1992,12 @@ def extract_uzs_amount(text: str, base_amount: int = 10000) -> Optional[int]:
             val = int(cleaned)
             if base_amount <= val <= base_amount + 300:
                 return val
-            elif val >= base_amount:
+            elif base_amount <= val <= 50_000_000:
                 return val
 
     # 2. Priority 2: Look for 5-digit number in the range [base_amount, base_amount + 300]
     # e.g. 10216, 10.216, 10 216 (ignoring numbers preceded by minus or balance symbol 💰)
-    salt_candidates = re.findall(r'(?<![-–—➖\d])(10[\s\.]?[0-3]\d\d)(?!\d)', text)
+    salt_candidates = re.findall(r'(?<![-–—➖\d])(10[\s\.]?[0-3]\d\d)(?!\d)', clean_text)
     for cand in salt_candidates:
         clean = re.sub(r'[\s\.]', '', cand)
         if clean.isdigit():
@@ -2004,12 +2010,12 @@ def extract_uzs_amount(text: str, base_amount: int = 10000) -> Optional[int]:
         r'(?:tushdi|vnesenie|popolnenie|kirim)\s*:?\s*([\d\s\.]+)(?:,\d{2})?\s*(?:uzs|so\'m|som|sum)',
     ]
     for pattern in currency_patterns:
-        matches = re.findall(pattern, text, re.IGNORECASE)
+        matches = re.findall(pattern, clean_text, re.IGNORECASE)
         for match in matches:
             cleaned = re.sub(r'[\s\.]', '', match.strip())
             if cleaned.isdigit():
                 val = int(cleaned)
-                if val >= 1000:
+                if 1000 <= val <= 50_000_000:
                     return val
 
     return None
@@ -2205,6 +2211,15 @@ def payment_process_incoming_sms(request):
 
     now = timezone.now()
 
+    safe_log_amount = amount
+    if safe_log_amount is not None:
+        try:
+            safe_log_amount = int(safe_log_amount)
+            if safe_log_amount > 9223372036854775807 or safe_log_amount < -9223372036854775808:
+                safe_log_amount = None
+        except (ValueError, TypeError):
+            safe_log_amount = None
+
     with transaction.atomic():
         # Match against active pending transactions with this exact amount
         tx = (
@@ -2232,7 +2247,7 @@ def payment_process_incoming_sms(request):
             PaymentAuditLog.objects.create(
                 sender=sender,
                 raw_message=raw_message,
-                extracted_amount=amount,
+                extracted_amount=safe_log_amount,
                 matched_transaction=tx,
                 is_matched=True
             )
@@ -2251,9 +2266,9 @@ def payment_process_incoming_sms(request):
             PaymentAuditLog.objects.create(
                 sender=sender,
                 raw_message=raw_message,
-                extracted_amount=amount,
+                extracted_amount=safe_log_amount,
                 is_matched=False,
-                error_details=f"Received {amount} UZS but no active pending transaction matched this exact amount."
+                error_details=f"Received {str(amount)[:50]} UZS but no active pending transaction matched this exact amount."
             )
 
             return Response({

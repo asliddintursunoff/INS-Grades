@@ -272,7 +272,7 @@ class PaymentAuditLog(models.Model):
     log_id = models.AutoField(primary_key=True)
     sender = models.CharField(max_length=100, null=True, blank=True)
     raw_message = models.TextField()
-    extracted_amount = models.IntegerField(null=True, blank=True)
+    extracted_amount = models.BigIntegerField(null=True, blank=True)
     matched_transaction = models.ForeignKey(
         PaymentTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs'
     )

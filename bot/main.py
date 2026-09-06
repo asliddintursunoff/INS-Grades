@@ -7,15 +7,19 @@ import logging
 from datetime import datetime, timezone, timedelta
 import httpx
 
-try:
-    from zoneinfo import ZoneInfo
-    UZB_TZ = ZoneInfo("Asia/Tashkent")
-except Exception:
-    UZB_TZ = timezone(timedelta(hours=5))
-
 def get_tashkent_now() -> datetime:
-    """Returns current datetime in Asia/Tashkent timezone."""
-    return datetime.now(UZB_TZ)
+    """Returns current datetime strictly in Asia/Tashkent timezone (UTC+5)."""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("Asia/Tashkent"))
+    except Exception:
+        pass
+    try:
+        return datetime.now(timezone(timedelta(hours=5)))
+    except Exception:
+        pass
+    return datetime.utcnow() + timedelta(hours=5)
+
 
 try:
     from dotenv import load_dotenv
@@ -855,12 +859,13 @@ class TimetableTelegramBot:
         current_day = now_uzb.weekday() + 1
         today_name = DAY_NAMES.get(current_day, "Today")
         date_str = now_uzb.strftime("%d/%m/%Y")
+        logger.info(f"[handle_today] tg_id={tg_id}, student_id={student.get('student_id')}, now={now_uzb.isoformat()}, day={current_day} ({today_name})")
 
         if current_day == 7:
             await self.send_message(chat_id, f"🎉 <b>No classes on Sunday ({date_str})!</b> Enjoy your weekend.", reply_markup=MAIN_MENU_KEYBOARD)
             return
 
-        slots = [s for s in tt_data["timetable"] if s.get("day_of_week") == current_day]
+        slots = [s for s in tt_data["timetable"] if int(s.get("day_of_week", 0)) == current_day]
         if not slots:
             await self.send_message(chat_id, f"🎉 <b>No classes scheduled for {today_name} ({date_str})!</b> Enjoy your free day.", reply_markup=MAIN_MENU_KEYBOARD)
             return
