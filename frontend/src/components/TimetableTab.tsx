@@ -69,10 +69,12 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
     setFeedbackMessage(null);
     setSwitchConfirmOption(null);
     setFilterUpcomingOnly(false);
-    // Default to permanent change, or keep user preference
     try {
+      const sessionParam = slot.session_number ? `&session_number=${slot.session_number}` : '';
+      const slotParam = slot.slot_id ? `&slot_id=${slot.slot_id}` : '';
+      const classParam = slot.class_id ? `&class_id=${slot.class_id}` : '';
       const res = await apiCall<{ options: AvailableGroupOption[] }>(
-        `/api/subjects/${slot.subject_id}/available-groups/?student_telegram_id=${studentId}`
+        `/api/subjects/${slot.subject_id}/available-groups/?student_telegram_id=${studentId}${sessionParam}${slotParam}${classParam}`
       );
       setAvailableSlots(res.options || []);
     } catch (err: any) {
@@ -83,13 +85,17 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
   };
 
   // Revert one-time make-up slot or permanent switch back to primary group
-  const handleRevertSlot = async (subjectId: number) => {
+  const handleRevertSlot = async (slot: ScheduleSlot) => {
     try {
       setLoading(true);
       await apiCall<{ success: boolean; message: string }>(
         `/api/students/${studentId}/revert-override/`,
         'POST',
-        { subject_id: subjectId }
+        {
+          subject_id: slot.subject_id,
+          slot_id: slot.slot_id,
+          original_slot_id: slot.original_slot_id || slot.slot_id,
+        }
       );
       fetchTimetable();
       if (onRefreshTrigger) onRefreshTrigger();
@@ -119,6 +125,9 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
         {
           old_class_id: activeSubjectSlot.class_id,
           new_class_id: option.class_id,
+          target_slot_id: option.slot_id || (option.slots && option.slots[0]?.slot_id),
+          original_slot_id: activeSubjectSlot.slot_id,
+          session_number: activeSubjectSlot.session_number || 1,
           change_type: option.is_own_group ? 'permanent' : mode,
         }
       );
@@ -363,7 +372,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
                           {slot.is_changed ? (
                             <>
                               <button
-                                onClick={() => handleRevertSlot(slot.subject_id)}
+                                onClick={() => handleRevertSlot(slot)}
                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
                                 title="Revert back to primary group schedule"
                               >
@@ -440,9 +449,14 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
                   <h3 className="text-sm font-bold text-slate-900 truncate">
                     {activeSubjectSlot.subject_full}
                   </h3>
+                  {activeSubjectSlot.total_sessions && activeSubjectSlot.total_sessions > 1 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      Session {activeSubjectSlot.session_number} of {activeSubjectSlot.total_sessions}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Change your class time permanently or attend a one-time make-up lesson.
+                  Showing alternative times with <strong>Prof. {activeSubjectSlot.professor}</strong> for <strong>Session {activeSubjectSlot.session_number || 1}</strong>.
                 </p>
               </div>
               <button

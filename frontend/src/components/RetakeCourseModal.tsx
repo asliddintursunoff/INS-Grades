@@ -388,8 +388,13 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
                             <div className="text-xs font-bold text-slate-900">
                               {sub.full_name}
                             </div>
-                            <div className="text-[11px] text-slate-500">
-                              {getYearLabel(sub.year_level)}
+                            <div className="text-[11px] text-slate-500 flex items-center gap-1.5 flex-wrap mt-0.5">
+                              <span>{getYearLabel(sub.year_level)}</span>
+                              {sub.majors && sub.majors.length > 0 && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {sub.majors.join(', ')}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>

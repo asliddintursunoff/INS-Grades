@@ -128,6 +128,141 @@ def resolve_student_obj(id_param: Optional[str]) -> Optional[Student]:
     return Student.objects.select_related('group').filter(student_id__iexact=id_str).first()
 
 
+def parse_group_name(group_name: str):
+    """
+    Parses IUT group name into (major, year_code, year_level, faculty, section).
+    Examples:
+      - 'CSE25-1' -> major='CSE', year_code='25', year_level=2, faculty='SOCIE', section='1'
+      - 'CIE26-8' -> major='CIE', year_code='26', year_level=1, faculty='SOCIE', section='8'
+      - 'BM26-1'  -> major='BM', year_code='26', year_level=1, faculty='SBL', section='1'
+      - 'SBL(B)25-2' -> major='SBL(B)', year_code='25', year_level=2, faculty='SBL', section='2'
+    """
+    name = (group_name or '').strip()
+    m = re.match(r'^([A-Za-z]+(?:\([A-Za-z]+\))?)(\d{2})(?:-(\d+))?$', name)
+    if m:
+        major = m.group(1).upper()
+        year_code = m.group(2)
+        section = m.group(3) or ''
+        year_level = {'26': 1, '25': 2, '24': 3, '23': 4}.get(year_code, 1)
+        faculty = 'SBL' if (major.startswith('SBL') or major.startswith('BM')) else 'SOCIE'
+        return {
+            'major': major,
+            'year_code': year_code,
+            'year_level': year_level,
+            'faculty': faculty,
+            'section': section,
+        }
+    is_sbl = 'SBL' in name.upper() or 'BM' in name.upper()
+    return {
+        'major': name.upper(),
+        'year_code': '26',
+        'year_level': 1,
+        'faculty': 'SBL' if is_sbl else 'SOCIE',
+        'section': '',
+    }
+
+
+def is_upcoming_slot(day_of_week: int, start_time: str) -> bool:
+    """Checks whether this lesson slot is still upcoming in the current calendar week."""
+    try:
+        now = datetime.datetime.now()
+        current_day = now.isoweekday()  # 1=Monday ... 7=Sunday
+        if day_of_week > current_day:
+            return True
+        elif day_of_week == current_day:
+            parts = str(start_time).strip().split(':')
+            slot_minutes = int(parts[0]) * 60 + int(parts[1])
+            curr_minutes = now.hour * 60 + now.minute
+            return slot_minutes >= curr_minutes
+        return False
+    except Exception:
+        return True
+
+
+def check_slot_conflict(student: Optional[Student], target_slot: GroupTimetableSlot, ignore_slot_id=None, ignore_subject_id=None):
+    """
+    Verifies whether target_slot overlaps in time with any active class the student has on that day.
+    Ignores the specific slot being replaced (ignore_slot_id).
+    """
+    if not student or not student.group:
+        return False, None
+
+    overrides = ScheduleOverride.objects.filter(student=student, day_of_week=target_slot.day_of_week).select_related('course_class__subject')
+    overridden_slot_ids = set()
+    for ov in overrides:
+        if ov.valid_from:
+            digs = re.findall(r'\d+', ov.valid_from)
+            if digs:
+                overridden_slot_ids.add(int(digs[0]))
+
+    def to_minutes(t_str):
+        p = str(t_str).strip().split(':')
+        return int(p[0]) * 60 + int(p[1])
+
+    t_start = to_minutes(target_slot.start_time)
+    t_end = to_minutes(target_slot.end_time)
+
+    # 1. Base slots for student group
+    base_slots = GroupTimetableSlot.objects.filter(
+        group=student.group,
+        day_of_week=target_slot.day_of_week
+    ).select_related('course_class__subject')
+
+    for bs in base_slots:
+        if ignore_slot_id and str(bs.slot_id) == str(ignore_slot_id):
+            continue
+        if bs.slot_id in overridden_slot_ids:
+            continue
+        if ignore_subject_id and bs.course_class.subject_id == int(ignore_subject_id):
+            continue
+        b_start = to_minutes(bs.start_time)
+        b_end = to_minutes(bs.end_time)
+        if max(t_start, b_start) < min(t_end, b_end):
+            return True, f"Conflicts with {bs.course_class.subject.short_name} ({bs.start_time}-{bs.end_time})"
+
+    # 2. Overrides
+    for ov in overrides:
+        if ignore_slot_id and str(ov.override_id) == str(ignore_slot_id):
+            continue
+        if ignore_subject_id and ov.course_class.subject_id == int(ignore_subject_id):
+            continue
+        o_start = to_minutes(ov.start_time)
+        o_end = to_minutes(ov.end_time)
+        if max(t_start, o_start) < min(t_end, o_end):
+            return True, f"Conflicts with {ov.course_class.subject.short_name} ({ov.start_time}-{ov.end_time})"
+
+    return False, None
+
+
+def is_class_eligible_for_student(c_major: str, c_year: int, c_faculty: str, stud_major: str, stud_year: int, stud_faculty: str):
+    """
+    Determines whether a course class belongs to the student's eligible degree stream and year.
+    """
+    if c_year > stud_year:
+        return False
+    if stud_faculty != c_faculty:
+        return False
+    if stud_faculty == 'SOCIE':
+        if c_year == 1:
+            if stud_major == 'IT':
+                return c_major == 'IT'
+            return c_major in ['CIE', 'SOCIE']
+        else:
+            if stud_major == c_major:
+                return True
+            if stud_major in ['AI', 'DS'] and c_major in ['AI', 'DS']:
+                return True
+            if stud_major in ['CSE', 'ICE'] and c_major in ['CSE', 'ICE'] and c_year >= 3:
+                return True
+            return False
+    else:  # SBL
+        if stud_major == 'BM':
+            return c_major == 'BM'
+        else:  # SBL(B), SBL(L)
+            return c_major.startswith('SBL')
+
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
@@ -485,63 +620,94 @@ def get_student_timetable(request, student_id):
         'course_class__subject', 'course_class__professor', 'course_class__group'
     ).order_by('day_of_week', 'start_time')
 
-    overridden_subject_ids = {ov.course_class.subject_id for ov in overrides}
+    # Collect overridden slot IDs and subjects
+    overridden_slot_ids = set()
+    legacy_overridden_subject_ids = set()
+    for ov in overrides:
+        if ov.valid_from:
+            digits = re.findall(r'\d+', str(ov.valid_from))
+            if digits:
+                overridden_slot_ids.add(int(digits[0]))
+            else:
+                legacy_overridden_subject_ids.add(ov.course_class.subject_id)
+        else:
+            legacy_overridden_subject_ids.add(ov.course_class.subject_id)
+
     extra_subject_ids = {slot.course_class.subject_id for slot in extra_slots}
 
     schedule = []
 
-    # Add base slots (if not overridden by one-time makeup and not replaced by permanent extra)
+    # Add base slots (omit if specific slot is overridden, or entire subject overridden in legacy mode)
     for slot in base_slots:
         cc = slot.course_class
-        if cc.subject_id not in overridden_subject_ids and cc.subject_id not in extra_subject_ids:
-            schedule.append({
-                "slot_id": slot.slot_id,
-                "day_of_week": slot.day_of_week,
-                "day_name": DAY_NAMES.get(slot.day_of_week, f"Day {slot.day_of_week}"),
-                "start_time": slot.start_time,
-                "end_time": slot.end_time,
-                "subject_id": cc.subject.subject_id,
-                "subject_short": cc.subject.short_name,
-                "subject_full": cc.subject.full_name,
-                "subject": cc.subject.full_name,
-                "professor": cc.professor.full_name,
-                "room": cc.room or "TBA",
-                "class_id": cc.class_id,
-                "is_changed": False,
-                "is_override": False,
-                "is_one_time": False,
-                "original_group": group_name,
-                "actual_group": group_name,
-            })
+        if slot.slot_id in overridden_slot_ids:
+            continue
+        if not overridden_slot_ids and cc.subject_id in legacy_overridden_subject_ids:
+            continue
+        if cc.subject_id in extra_subject_ids:
+            continue
+
+        schedule.append({
+            "slot_id": slot.slot_id,
+            "day_of_week": slot.day_of_week,
+            "day_name": DAY_NAMES.get(slot.day_of_week, f"Day {slot.day_of_week}"),
+            "start_time": slot.start_time,
+            "end_time": slot.end_time,
+            "subject_id": cc.subject.subject_id,
+            "subject_short": cc.subject.short_name,
+            "subject_full": cc.subject.full_name,
+            "subject": cc.subject.full_name,
+            "professor": cc.professor.full_name,
+            "room": cc.room or "TBA",
+            "class_id": cc.class_id,
+            "is_changed": False,
+            "is_override": False,
+            "is_one_time": False,
+            "original_group": group_name,
+            "actual_group": group_name,
+        })
 
     # Add extra slots (permanently changed sections or retakes)
     for slot in extra_slots:
         cc = slot.course_class
-        if cc.subject_id not in overridden_subject_ids:
-            is_perm = cc.group.group_name != group_name
-            schedule.append({
-                "slot_id": slot.slot_id,
-                "day_of_week": slot.day_of_week,
-                "day_name": DAY_NAMES.get(slot.day_of_week, f"Day {slot.day_of_week}"),
-                "start_time": slot.start_time,
-                "end_time": slot.end_time,
-                "subject_id": cc.subject.subject_id,
-                "subject_short": cc.subject.short_name,
-                "subject_full": cc.subject.full_name,
-                "subject": cc.subject.full_name,
-                "professor": cc.professor.full_name,
-                "room": cc.room or "TBA",
-                "class_id": cc.class_id,
-                "is_changed": is_perm,
-                "is_override": False,
-                "is_one_time": False,
-                "original_group": group_name,
-                "actual_group": cc.group.group_name,
-            })
+        if slot.slot_id in overridden_slot_ids:
+            continue
+        if not overridden_slot_ids and cc.subject_id in legacy_overridden_subject_ids:
+            continue
+        is_perm = cc.group.group_name != group_name
+        schedule.append({
+            "slot_id": slot.slot_id,
+            "day_of_week": slot.day_of_week,
+            "day_name": DAY_NAMES.get(slot.day_of_week, f"Day {slot.day_of_week}"),
+            "start_time": slot.start_time,
+            "end_time": slot.end_time,
+            "subject_id": cc.subject.subject_id,
+            "subject_short": cc.subject.short_name,
+            "subject_full": cc.subject.full_name,
+            "subject": cc.subject.full_name,
+            "professor": cc.professor.full_name,
+            "room": cc.room or "TBA",
+            "class_id": cc.class_id,
+            "is_changed": is_perm,
+            "is_override": False,
+            "is_one_time": False,
+            "original_group": group_name,
+            "actual_group": cc.group.group_name,
+        })
 
-    # Add one-time overrides
+    # Add overrides
     for ov in overrides:
         cc = ov.course_class
+        is_one_time = True
+        if ov.valid_to and "permanent" in str(ov.valid_to).lower():
+            is_one_time = False
+
+        orig_slot_val = None
+        if ov.valid_from:
+            digs = re.findall(r'\d+', str(ov.valid_from))
+            if digs:
+                orig_slot_val = int(digs[0])
+
         schedule.append({
             "slot_id": ov.override_id,
             "day_of_week": ov.day_of_week,
@@ -557,10 +723,11 @@ def get_student_timetable(request, student_id):
             "class_id": cc.class_id,
             "is_changed": True,
             "is_override": True,
-            "is_one_time": True,
-            "reverts_next_week": True,
+            "is_one_time": is_one_time,
+            "reverts_next_week": is_one_time,
             "original_group": group_name,
             "actual_group": cc.group.group_name,
+            "original_slot_id": orig_slot_val,
         })
 
     schedule.sort(key=lambda x: (x["day_of_week"], x["start_time"]))
@@ -694,25 +861,63 @@ def student_retake_catalog(request, student_id):
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    user_year = student.year_of_study or 2
+    stud_info = parse_group_name(student.group.group_name if student.group else "")
+    user_year = student.year_of_study or stud_info['year_level']
+    stud_major = stud_info['major']
+    stud_faculty = stud_info['faculty']
+
     available_years = list(range(1, user_year + 1))
 
-    subjects = Subject.objects.filter(year_level__in=available_years).order_by('year_level', 'full_name')
+    # All classes with group and subject
+    classes = CourseClass.objects.select_related('group', 'subject', 'professor')
 
+    # Subject enrollment mapping
     enrollments = {
         e.course_class.subject_id: e
         for e in StudentClassEnrollment.objects.filter(student=student).select_related('course_class')
     }
 
+    # Build catalog filtering by major/faculty and year <= user_year
+    subject_map = {}
+    for c in classes:
+        c_info = parse_group_name(c.group.group_name)
+        c_major = c_info['major']
+        c_yr = c_info['year_level']
+        c_fac = c_info['faculty']
+
+        is_elective = c.subject.short_name in ['BK1-R', 'BK1-U', 'Mental Education'] and c_yr <= user_year
+        is_eligible = is_elective or is_class_eligible_for_student(
+            c_major, c_yr, c_fac, stud_major, user_year, stud_faculty
+        )
+
+        if not is_eligible:
+            continue
+
+        sid = c.subject.subject_id
+        if sid not in subject_map:
+            subject_map[sid] = {
+                'subject': c.subject,
+                'year_level': c_yr,
+                'faculty': c_fac,
+                'majors': {c_major},
+            }
+        else:
+            subject_map[sid]['majors'].add(c_major)
+            if c_yr < subject_map[sid]['year_level']:
+                subject_map[sid]['year_level'] = c_yr
+
     subj_list = []
-    for s in subjects:
+    for sid, info in sorted(subject_map.items(), key=lambda x: (x[1]['year_level'], x[1]['subject'].full_name)):
+        s = info['subject']
         enr = enrollments.get(s.subject_id)
         enr_status = enr.status if enr else 'none'
         subj_list.append({
             "subject_id": s.subject_id,
             "short_name": s.short_name,
             "full_name": s.full_name,
-            "year_level": s.year_level,
+            "year_level": info['year_level'],
+            "faculty": info['faculty'],
+            "majors": sorted(list(info['majors'])),
             "enrollment_status": enr_status,
             "is_enrolled": (enr_status == 'active'),
             "current_class_id": enr.course_class_id if enr else None,
@@ -722,6 +927,8 @@ def student_retake_catalog(request, student_id):
         "student_id": student.student_id,
         "student_name": student.full_name,
         "student_year": user_year,
+        "student_major": stud_major,
+        "student_faculty": stud_faculty,
         "available_years": available_years,
         "subjects": subj_list,
     })
@@ -739,7 +946,7 @@ def student_enroll_retake(request, student_id):
     if not class_id:
         return Response({"error": "class_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    cc = get_object_or_404(CourseClass.objects.select_related('subject', 'group'), class_id=class_id)
+    cc = get_object_or_404(CourseClass.objects.select_related('subject', 'group', 'professor'), class_id=class_id)
 
     # Deactivate other enrollments for same subject
     StudentClassEnrollment.objects.filter(
@@ -758,14 +965,15 @@ def student_enroll_retake(request, student_id):
     # If class is outside student base group, add override slots
     if student.group_id != cc.group_id:
         ScheduleOverride.objects.filter(student=student, course_class__subject=cc.subject).delete()
-        slots = GroupTimetableSlot.objects.filter(course_class=cc)
-        for slot in slots:
+        slots = GroupTimetableSlot.objects.filter(course_class=cc).order_by('day_of_week', 'start_time')
+        for idx, slot in enumerate(slots, 1):
             ScheduleOverride.objects.create(
                 student=student,
                 day_of_week=slot.day_of_week,
                 start_time=slot.start_time,
                 end_time=slot.end_time,
                 course_class=cc,
+                valid_to=f"session_{idx}:permanent"
             )
 
     return Response({
@@ -777,67 +985,285 @@ def student_enroll_retake(request, student_id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def subject_available_groups(request, subject_id):
-    """Returns all class sections teaching a subject across all groups."""
+    """
+    Returns available class sections for a subject.
+    Enforces strict rules:
+      1. SAME PROFESSOR: University rules mandate attending the same professor's lecture.
+      2. SAME MAJOR & YEAR: Class section must be within the student's degree stream and course year.
+      3. PER-SESSION FILTERING: If session_number is specified (e.g. 1 or 2), only returns that
+         individual session's slot, preventing cross-session replacement.
+    """
     subject = get_object_or_404(Subject, subject_id=subject_id)
-    student_param = request.query_params.get('student_telegram_id', '')
+    student_param = request.query_params.get('student_telegram_id') or request.query_params.get('student_id')
     student = resolve_student_obj(student_param)
     student_group_id = student.group_id if student else None
 
-    classes = CourseClass.objects.filter(subject=subject).select_related('group', 'professor')
+    stud_info = parse_group_name(student.group.group_name if student and student.group else '')
+    stud_major = stud_info['major']
+    stud_yr_code = stud_info['year_code']
+    stud_yr_level = stud_info['year_level']
+    stud_faculty = stud_info['faculty']
+
+    # Current class and professor resolution
+    current_class = None
+    class_id_param = request.query_params.get('class_id') or request.query_params.get('current_class_id')
+    slot_id_param = request.query_params.get('slot_id')
+
+    if slot_id_param and str(slot_id_param).isdigit():
+        base_slot = GroupTimetableSlot.objects.filter(slot_id=int(slot_id_param)).select_related('course_class__professor').first()
+        if base_slot:
+            current_class = base_slot.course_class
+
+    if not current_class and class_id_param and str(class_id_param).isdigit():
+        current_class = CourseClass.objects.filter(class_id=int(class_id_param)).select_related('professor', 'group').first()
+
+    if not current_class and student:
+        enr = StudentClassEnrollment.objects.filter(
+            student=student, course_class__subject_id=subject_id, status='active'
+        ).select_related('course_class__professor', 'course_class__group').first()
+        if enr:
+            current_class = enr.course_class
+        elif student.group:
+            current_class = CourseClass.objects.filter(
+                group=student.group, subject_id=subject_id
+            ).select_related('professor', 'group').first()
+
+    # Determine session number
+    session_num = None
+    session_num_param = request.query_params.get('session_number')
+    if session_num_param and str(session_num_param).isdigit():
+        session_num = int(session_num_param)
+    elif slot_id_param and current_class:
+        # Auto-detect which session this slot corresponds to (e.g. 1st or 2nd slot in week)
+        c_slots = list(GroupTimetableSlot.objects.filter(course_class=current_class).order_by('day_of_week', 'start_time'))
+        for idx, s in enumerate(c_slots, 1):
+            if str(s.slot_id) == str(slot_id_param):
+                session_num = idx
+                break
+
+    # Build candidate classes query
+    classes_qs = CourseClass.objects.filter(subject=subject).select_related('group', 'professor')
+
+    if current_class:
+        # STRICT PROFESSOR FILTER: Must be taught by the same professor!
+        classes_qs = classes_qs.filter(professor=current_class.professor)
+
+        # STRICT MAJOR & YEAR FILTER: Must match student's major prefix and year code (e.g. CSE25)
+        if stud_major and stud_yr_code:
+            major_matched = classes_qs.filter(group__group_name__startswith=f"{stud_major}{stud_yr_code}")
+            if major_matched.exists():
+                classes_qs = major_matched
+            else:
+                # If professor has sections in related major in same faculty & year (e.g. ICE25 vs CSE25)
+                cand_list = []
+                for c in classes_qs:
+                    c_inf = parse_group_name(c.group.group_name)
+                    if c_inf['faculty'] == stud_faculty and c_inf['year_code'] == stud_yr_code:
+                        cand_list.append(c)
+                if cand_list:
+                    classes_qs = cand_list
+    else:
+        # Browsing without current class (e.g. retake catalog)
+        if stud_faculty:
+            cand_list = [c for c in classes_qs if parse_group_name(c.group.group_name)['faculty'] == stud_faculty]
+            if cand_list:
+                classes_qs = cand_list
+
+    # Ensure list
+    candidate_classes = list(classes_qs)
 
     options = []
-    for c in classes:
-        slots = GroupTimetableSlot.objects.filter(course_class=c).order_by('day_of_week', 'start_time')
-        slot_list = []
-        for s in slots:
-            slot_list.append({
+    for c in candidate_classes:
+        all_slots = list(GroupTimetableSlot.objects.filter(course_class=c).order_by('day_of_week', 'start_time'))
+        if not all_slots:
+            continue
+
+        total_sessions = len(all_slots)
+
+        if session_num and 1 <= session_num <= total_sessions:
+            # Single session mode: ONLY return the requested session slot
+            target_slot = all_slots[session_num - 1]
+
+            has_conflict, conflict_reason = check_slot_conflict(
+                student, target_slot, ignore_slot_id=slot_id_param, ignore_subject_id=subject_id if session_num is None else None
+            )
+            is_own = (c.group_id == student_group_id)
+
+            options.append({
+                "class_id": c.class_id,
+                "slot_id": target_slot.slot_id,
+                "group_name": c.group.group_name,
+                "professor": c.professor.full_name,
+                "day_of_week": target_slot.day_of_week,
+                "day_name": DAY_NAMES.get(target_slot.day_of_week, f"Day {target_slot.day_of_week}"),
+                "start_time": target_slot.start_time,
+                "end_time": target_slot.end_time,
+                "room": c.room or "TBA",
+                "session_number": session_num,
+                "total_sessions": total_sessions,
+                "sessions_per_week": 1,
+                "slots": [{
+                    "slot_id": target_slot.slot_id,
+                    "day_of_week": target_slot.day_of_week,
+                    "day_name": DAY_NAMES.get(target_slot.day_of_week, f"Day {target_slot.day_of_week}"),
+                    "start_time": target_slot.start_time,
+                    "end_time": target_slot.end_time,
+                    "room": c.room or "TBA",
+                    "session_number": session_num,
+                    "is_upcoming": is_upcoming_slot(target_slot.day_of_week, target_slot.start_time),
+                }],
+                "time_summary": f"{DAY_NAMES.get(target_slot.day_of_week, '')} {target_slot.start_time}-{target_slot.end_time}",
+                "is_own_group": is_own,
+                "is_available": not has_conflict,
+                "is_upcoming": is_upcoming_slot(target_slot.day_of_week, target_slot.start_time),
+                "recommended": is_own,
+                "conflict_reason": conflict_reason if has_conflict else None,
+            })
+        else:
+            # Full class mode (all sessions) - for retake catalog registration
+            primary_slot = all_slots[0]
+            time_sum = ", ".join([f"{DAY_NAMES.get(s.day_of_week, '')} {s.start_time}-{s.end_time}" for s in all_slots])
+            is_own = (c.group_id == student_group_id)
+
+            has_conflict = False
+            conflict_reason = None
+            for s in all_slots:
+                conf, r = check_slot_conflict(student, s, ignore_subject_id=subject_id)
+                if conf:
+                    has_conflict = True
+                    conflict_reason = r
+                    break
+
+            slot_list = [{
+                "slot_id": s.slot_id,
                 "day_of_week": s.day_of_week,
                 "day_name": DAY_NAMES.get(s.day_of_week, f"Day {s.day_of_week}"),
                 "start_time": s.start_time,
                 "end_time": s.end_time,
                 "room": c.room or "TBA",
-                "is_upcoming": True,
+                "session_number": idx,
+                "is_upcoming": is_upcoming_slot(s.day_of_week, s.start_time),
+            } for idx, s in enumerate(all_slots, 1)]
+
+            options.append({
+                "class_id": c.class_id,
+                "slot_id": primary_slot.slot_id,
+                "group_name": c.group.group_name,
+                "professor": c.professor.full_name,
+                "day_of_week": primary_slot.day_of_week,
+                "day_name": DAY_NAMES.get(primary_slot.day_of_week, f"Day {primary_slot.day_of_week}"),
+                "start_time": primary_slot.start_time,
+                "end_time": primary_slot.end_time,
+                "room": c.room or "TBA",
+                "session_number": 1,
+                "total_sessions": total_sessions,
+                "sessions_per_week": total_sessions,
+                "slots": slot_list,
+                "time_summary": time_sum,
+                "is_own_group": is_own,
+                "is_available": not has_conflict,
+                "is_upcoming": any(is_upcoming_slot(s.day_of_week, s.start_time) for s in all_slots),
+                "recommended": is_own,
+                "conflict_reason": conflict_reason if has_conflict else None,
             })
 
-        primary_slot = slot_list[0] if slot_list else None
-        time_sum = ", ".join([f"{s['day_name']} {s['start_time']}-{s['end_time']}" for s in slot_list])
-        is_own = (c.group_id == student_group_id)
-
-        options.append({
-            "class_id": c.class_id,
-            "group_name": c.group.group_name,
-            "professor": c.professor.full_name,
-            "day_of_week": primary_slot["day_of_week"] if primary_slot else 1,
-            "day_name": primary_slot["day_name"] if primary_slot else "TBA",
-            "start_time": primary_slot["start_time"] if primary_slot else "09:00",
-            "end_time": primary_slot["end_time"] if primary_slot else "10:30",
-            "room": c.room or "TBA",
-            "sessions_per_week": len(slot_list),
-            "slots": slot_list,
-            "time_summary": time_sum,
-            "is_own_group": is_own,
-            "is_available": True,
-            "is_upcoming": True,
-            "recommended": is_own,
-        })
-
-    return Response({"options": options})
+    return Response({
+        "options": options,
+        "session_number": session_num,
+        "professor": current_class.professor.full_name if current_class else None,
+        "subject_name": subject.full_name,
+    })
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def student_change_group(request, student_id):
-    """Applies permanent or one-time make-up section change for a student."""
+    """
+    Applies section change for a student.
+    Supports:
+      1. Single Session Change: If session_number or original_slot_id is provided,
+         overrides ONLY that specific session, leaving the other session with the student's base group.
+      2. Full Course Change: Switches all sessions of the course to the new group.
+    """
     student = resolve_student_obj(student_id)
     if not student:
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
     new_class_id = request.data.get('new_class_id')
     change_type = request.data.get('change_type', 'permanent')
+    target_slot_id = request.data.get('target_slot_id')
+    original_slot_id = request.data.get('original_slot_id')
+    session_number = request.data.get('session_number')
 
-    new_class = get_object_or_404(CourseClass.objects.select_related('subject', 'group'), class_id=new_class_id)
+    if not new_class_id:
+        return Response({"error": "new_class_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    new_class = get_object_or_404(CourseClass.objects.select_related('subject', 'group', 'professor'), class_id=new_class_id)
     subj = new_class.subject
 
+    # Reverting back to own base group
+    if student.group_id == new_class.group_id:
+        if original_slot_id:
+            ScheduleOverride.objects.filter(student=student, valid_from__contains=str(original_slot_id)).delete()
+        else:
+            ScheduleOverride.objects.filter(student=student, course_class__subject=subj).delete()
+
+        return Response({
+            "success": True,
+            "mode": "reverted",
+            "message": f"Successfully reverted {subj.short_name} back to your primary group {new_class.group.group_name}."
+        })
+
+    # 1. Single Session Override
+    if session_number or original_slot_id or target_slot_id:
+        # Find target slot of new_class
+        target_slot = None
+        if target_slot_id:
+            target_slot = GroupTimetableSlot.objects.filter(slot_id=int(target_slot_id), course_class=new_class).first()
+        if not target_slot and session_number:
+            new_slots = list(GroupTimetableSlot.objects.filter(course_class=new_class).order_by('day_of_week', 'start_time'))
+            idx = int(session_number) - 1
+            if 0 <= idx < len(new_slots):
+                target_slot = new_slots[idx]
+
+        # Find original base slot being replaced
+        orig_slot = None
+        if original_slot_id:
+            orig_slot = GroupTimetableSlot.objects.filter(slot_id=int(original_slot_id)).first()
+        if not orig_slot and session_number and student.group:
+            base_slots = list(GroupTimetableSlot.objects.filter(group=student.group, course_class__subject=subj).order_by('day_of_week', 'start_time'))
+            idx = int(session_number) - 1
+            if 0 <= idx < len(base_slots):
+                orig_slot = base_slots[idx]
+
+        if target_slot:
+            # Delete any previous override for this specific slot or session
+            if orig_slot:
+                ScheduleOverride.objects.filter(student=student, valid_from__contains=str(orig_slot.slot_id)).delete()
+            if session_number:
+                ScheduleOverride.objects.filter(student=student, course_class__subject=subj, valid_to__startswith=f"session_{session_number}").delete()
+
+            ScheduleOverride.objects.create(
+                student=student,
+                course_class=new_class,
+                day_of_week=target_slot.day_of_week,
+                start_time=target_slot.start_time,
+                end_time=target_slot.end_time,
+                valid_from=str(orig_slot.slot_id) if orig_slot else '',
+                valid_to=f"session_{session_number or 1}:{change_type}"
+            )
+
+            session_label = f"Session {session_number} of " if session_number else ""
+            timing_label = f" ({DAY_NAMES.get(target_slot.day_of_week, '')} {target_slot.start_time}-{target_slot.end_time})"
+
+            return Response({
+                "success": True,
+                "mode": change_type,
+                "session_number": session_number,
+                "message": f"Successfully moved {session_label}{subj.full_name} ({subj.short_name}) to section {new_class.group.group_name}{timing_label} with Prof. {new_class.professor.full_name}."
+            })
+
+    # 2. Full Course Change (both sessions)
     if change_type == 'permanent':
         StudentClassEnrollment.objects.filter(
             student=student, course_class__subject=subj
@@ -856,24 +1282,25 @@ def student_change_group(request, student_id):
         return Response({
             "success": True,
             "mode": "permanent",
-            "message": f"Permanently moved {subj.full_name} ({subj.short_name}) to section {new_class.group.group_name}."
+            "message": f"Permanently moved {subj.full_name} ({subj.short_name}) to section {new_class.group.group_name} with Prof. {new_class.professor.full_name}."
         })
     else:
         ScheduleOverride.objects.filter(student=student, course_class__subject=subj).delete()
-        slots = GroupTimetableSlot.objects.filter(course_class=new_class)
-        for s in slots:
+        slots = GroupTimetableSlot.objects.filter(course_class=new_class).order_by('day_of_week', 'start_time')
+        for idx, s in enumerate(slots, 1):
             ScheduleOverride.objects.create(
                 student=student,
                 day_of_week=s.day_of_week,
                 start_time=s.start_time,
                 end_time=s.end_time,
                 course_class=new_class,
+                valid_to=f"session_{idx}:one_time"
             )
 
         return Response({
             "success": True,
             "mode": "one_time",
-            "message": f"Scheduled one-time make-up lesson with section {new_class.group.group_name} for this week."
+            "message": f"Scheduled one-time make-up lessons with section {new_class.group.group_name} for this week."
         })
 
 
@@ -886,8 +1313,21 @@ def student_revert_override(request, student_id):
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
     subject_id = request.data.get('subject_id')
+    slot_id = request.data.get('slot_id') or request.data.get('original_slot_id')
+
+    if slot_id:
+        deleted, _ = ScheduleOverride.objects.filter(
+            student=student, valid_from__contains=str(slot_id)
+        ).delete()
+        if not deleted:
+            ScheduleOverride.objects.filter(student=student, override_id=slot_id).delete()
+        return Response({
+            "success": True,
+            "message": "Successfully reverted session back to your primary group timetable."
+        })
+
     if not subject_id:
-        return Response({"error": "subject_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "subject_id or slot_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     ScheduleOverride.objects.filter(student=student, course_class__subject_id=subject_id).delete()
 
@@ -907,7 +1347,7 @@ def student_revert_override(request, student_id):
 
     return Response({
         "success": True,
-        "message": "Schedule reverted back to your regular primary group timetable."
+        "message": "Successfully reverted schedule back to your primary group timetable."
     })
 
 

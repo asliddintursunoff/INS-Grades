@@ -22,6 +22,8 @@ export interface StudentClass {
 }
 
 export interface ScheduleSlot {
+  slot_id?: number;
+  original_slot_id?: number;
   day_of_week: number;
   day_name: string;
   start_time: string;
@@ -62,6 +64,7 @@ export interface GroupTimeSlot {
 
 export interface AvailableGroupOption {
   class_id: number;
+  slot_id?: number;
   group_name: string;
   professor: string;
   day_of_week: number;
@@ -69,6 +72,8 @@ export interface AvailableGroupOption {
   start_time: string;
   end_time: string;
   room: string;
+  session_number?: number;
+  total_sessions?: number;
   sessions_per_week?: number;
   slots?: GroupTimeSlot[];
   time_summary?: string;
@@ -117,6 +122,8 @@ export interface RetakeSubject {
   short_name: string;
   full_name: string;
   year_level: number;
+  faculty?: string;
+  majors?: string[];
   enrollment_status: 'active' | 'dropped' | 'none';
   is_enrolled: boolean;
   current_class_id?: number | null;
@@ -126,6 +133,8 @@ export interface RetakeCatalogResponse {
   student_id: string;
   student_name: string;
   student_year: number;
+  student_major?: string;
+  student_faculty?: string;
   available_years: number[];
   subjects: RetakeSubject[];
 }
