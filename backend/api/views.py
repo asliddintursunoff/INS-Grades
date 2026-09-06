@@ -2,8 +2,10 @@ import os
 import datetime
 import uuid
 import re
+import random
 from typing import Optional
-from django.db import connection
+from django.db import connection, transaction
+from django.utils import timezone
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
@@ -27,6 +29,8 @@ from .models import (
     NotificationSettings,
     SentNotification,
     ClassNotificationLog,
+    PaymentTransaction,
+    PaymentAuditLog,
 )
 from .serializers import (
     ProfessorSerializer,
@@ -1911,3 +1915,290 @@ def mark_class_alert_sent(request):
     )
 
     return Response({"success": True, "message": "Alert marked as sent"})
+
+
+def extract_uzs_amount(text: str, base_amount: int = 10000) -> Optional[int]:
+    """
+    Intelligently extracts the payment amount in UZS from SMS / notification texts.
+    Prioritizes amounts matching the [base_amount, base_amount + 300] variance window,
+    then falls back to generic currency regex.
+    """
+    if not text:
+        return None
+
+    # 1. First priority: Look for numbers in the range [base_amount, base_amount + 300]
+    # e.g. 10147, 10 147, 10,147
+    salt_candidates = re.findall(r'(?<!\d)(10[\s,\.]?[0-3]\d\d)(?!\d)', text)
+    for cand in salt_candidates:
+        clean = re.sub(r'[\s,\.]', '', cand)
+        if clean.isdigit():
+            val = int(clean)
+            if base_amount <= val <= base_amount + 300:
+                return val
+
+    # 2. Look for explicit amount with currency symbols:
+    # +10 147 UZS, 10 147 so'm, 10,147.00 som
+    currency_patterns = [
+        r'(?:\+|tushdi|vnesenie|popolnenie|summa:?|oplata:?)\s*([\d\s,\.]+)\s*(?:uzs|so\'m|som|sum)',
+        r'([\d\s,\.]+)\s*(?:uzs|so\'m|som|sum)',
+    ]
+    for pattern in currency_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            cleaned = re.sub(r'\.00$', '', match.strip())
+            cleaned = re.sub(r'[\s,]', '', cleaned)
+            if cleaned.isdigit():
+                val = int(cleaned)
+                if val >= 1000:
+                    return val
+
+    return None
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def payment_create(request):
+    """
+    Creates a new pending payment transaction with a unique dynamic salt (001-300).
+    Atomically ensures no two concurrent users receive the same exact amount.
+    """
+    student_id = request.data.get('student_id')
+    if not student_id:
+        return Response({"error": "student_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    student = resolve_student_obj(student_id)
+    if not student:
+        return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    card_number = os.getenv('PAYMENT_CARD_NUMBER', '9860 3501 0244 5532')
+    card_holder = os.getenv('PAYMENT_CARD_HOLDER', 'Asliddin Tursunov')
+    base_amount = int(os.getenv('BASE_PREMIUM_PRICE', '10000'))
+    timeout_minutes = int(os.getenv('PAYMENT_TIMEOUT_MINUTES', '5'))
+
+    now = timezone.now()
+
+    with transaction.atomic():
+        # Clean up any expired transactions
+        PaymentTransaction.objects.select_for_update().filter(
+            status='pending', expires_at__lte=now
+        ).update(status='expired')
+
+        # Check if student already has an active pending transaction with > 30s remaining
+        existing_tx = PaymentTransaction.objects.select_for_update().filter(
+            student=student,
+            status='pending',
+            expires_at__gt=now + datetime.timedelta(seconds=30)
+        ).order_by('-created_at').first()
+
+        if existing_tx:
+            seconds_remaining = max(0, int((existing_tx.expires_at - now).total_seconds()))
+            return Response({
+                "success": True,
+                "transaction_id": str(existing_tx.transaction_id),
+                "base_amount": existing_tx.base_amount,
+                "salt": existing_tx.salt,
+                "total_amount": existing_tx.total_amount,
+                "formatted_amount": f"{existing_tx.total_amount:,}".replace(",", " "),
+                "card_number": existing_tx.card_number,
+                "card_holder": existing_tx.card_holder,
+                "expires_at": existing_tx.expires_at.isoformat(),
+                "seconds_remaining": seconds_remaining,
+                "status": existing_tx.status,
+                "is_reused": True
+            })
+
+        # Reserve a unique salt from 1 to 300
+        active_salts = set(
+            PaymentTransaction.objects.select_for_update()
+            .filter(status='pending', expires_at__gt=now)
+            .values_list('salt', flat=True)
+        )
+
+        available_salts = [s for s in range(1, 301) if s not in active_salts]
+        if not available_salts:
+            return Response({
+                "error": "Hozirda barcha to'lov liniyalari band. Iltimos 1-2 daqiqadan so'ng qayta urinib ko'ring.",
+                "retry_after_seconds": 60
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        chosen_salt = random.choice(available_salts)
+        total_amount = base_amount + chosen_salt
+        expires_at = now + datetime.timedelta(minutes=timeout_minutes)
+
+        tx = PaymentTransaction.objects.create(
+            student=student,
+            base_amount=base_amount,
+            salt=chosen_salt,
+            total_amount=total_amount,
+            card_number=card_number,
+            card_holder=card_holder,
+            status='pending',
+            expires_at=expires_at,
+        )
+
+    return Response({
+        "success": True,
+        "transaction_id": str(tx.transaction_id),
+        "base_amount": tx.base_amount,
+        "salt": tx.salt,
+        "total_amount": tx.total_amount,
+        "formatted_amount": f"{tx.total_amount:,}".replace(",", " "),
+        "card_number": tx.card_number,
+        "card_holder": tx.card_holder,
+        "expires_at": tx.expires_at.isoformat(),
+        "seconds_remaining": timeout_minutes * 60,
+        "status": tx.status
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def payment_status(request, transaction_id):
+    """
+    Checks status of a payment transaction. Automatically transitions to expired if time has elapsed.
+    """
+    try:
+        tx = PaymentTransaction.objects.select_related('student').get(transaction_id=transaction_id)
+    except (PaymentTransaction.DoesNotExist, ValueError):
+        return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    now = timezone.now()
+    if tx.status == 'pending' and now > tx.expires_at:
+        tx.status = 'expired'
+        tx.save(update_fields=['status'])
+
+    seconds_left = max(0, int((tx.expires_at - now).total_seconds())) if tx.status == 'pending' else 0
+    student = tx.student
+
+    return Response({
+        "transaction_id": str(tx.transaction_id),
+        "status": tx.status,
+        "total_amount": tx.total_amount,
+        "seconds_remaining": seconds_left,
+        "is_premium": student.has_premium,
+        "premium_expires_at": student.premium_expires_at.isoformat() if student.premium_expires_at else None,
+        "completed_at": tx.completed_at.isoformat() if tx.completed_at else None
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def payment_cancel(request, transaction_id):
+    """Cancels a pending payment transaction so its salt is immediately available for others."""
+    try:
+        tx = PaymentTransaction.objects.get(transaction_id=transaction_id)
+    except (PaymentTransaction.DoesNotExist, ValueError):
+        return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if tx.status == 'pending':
+        tx.status = 'cancelled'
+        tx.save(update_fields=['status'])
+
+    return Response({"success": True, "status": tx.status})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def payment_process_incoming_sms(request):
+    """
+    Internal endpoint called by Telethon worker when an incoming SMS / notification arrives.
+    Extracts amount, matches pending transaction, activates 30 days of Premium, records audit log.
+    """
+    expected_secret = os.getenv('PAYMENT_SECRET_KEY', 'ins_pay_internal_secret_2026_x77')
+    provided_secret = request.headers.get('X-Payment-Secret') or request.GET.get('secret') or request.data.get('secret')
+
+    if provided_secret != expected_secret:
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    raw_message = request.data.get('raw_message', '').strip()
+    sender = request.data.get('sender', '').strip()
+    telegram_message_id = request.data.get('telegram_message_id')
+
+    if not raw_message:
+        return Response({"error": "raw_message is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Idempotency check: Don't process the same Telegram message twice
+    if telegram_message_id and PaymentTransaction.objects.filter(telegram_message_id=str(telegram_message_id)).exists():
+        return Response({
+            "success": True,
+            "duplicate": True,
+            "message": "Message already processed successfully."
+        })
+
+    base_price = int(os.getenv('BASE_PREMIUM_PRICE', '10000'))
+    amount = extract_uzs_amount(raw_message, base_amount=base_price)
+
+    if not amount:
+        PaymentAuditLog.objects.create(
+            sender=sender,
+            raw_message=raw_message,
+            extracted_amount=None,
+            is_matched=False,
+            error_details="No valid UZS payment amount could be parsed from message text."
+        )
+        return Response({
+            "success": True,
+            "matched": False,
+            "reason": "No valid amount extracted",
+            "raw_message": raw_message
+        })
+
+    now = timezone.now()
+
+    with transaction.atomic():
+        # Match against active pending transactions with this exact amount
+        tx = (
+            PaymentTransaction.objects.select_for_update()
+            .select_related('student')
+            .filter(total_amount=amount, status='pending', expires_at__gt=now)
+            .order_by('created_at')
+            .first()
+        )
+
+        if tx:
+            tx.status = 'completed'
+            tx.completed_at = now
+            if telegram_message_id:
+                tx.telegram_message_id = str(telegram_message_id)
+            tx.save()
+
+            # Activate 30 days of Premium for the student
+            student = tx.student
+            student.is_premium = True
+            current_expiry = student.premium_expires_at if (student.premium_expires_at and student.premium_expires_at > now) else now
+            student.premium_expires_at = current_expiry + datetime.timedelta(days=30)
+            student.save(update_fields=['is_premium', 'premium_expires_at'])
+
+            PaymentAuditLog.objects.create(
+                sender=sender,
+                raw_message=raw_message,
+                extracted_amount=amount,
+                matched_transaction=tx,
+                is_matched=True
+            )
+
+            return Response({
+                "success": True,
+                "matched": True,
+                "transaction_id": str(tx.transaction_id),
+                "student_id": student.student_id,
+                "student_name": student.full_name,
+                "amount": amount,
+                "premium_expires_at": student.premium_expires_at.isoformat()
+            })
+        else:
+            # Unmatched payment (e.g. sent after 5 minutes expired, or wrong amount)
+            PaymentAuditLog.objects.create(
+                sender=sender,
+                raw_message=raw_message,
+                extracted_amount=amount,
+                is_matched=False,
+                error_details=f"Received {amount} UZS but no active pending transaction matched this exact amount."
+            )
+
+            return Response({
+                "success": True,
+                "matched": False,
+                "extracted_amount": amount,
+                "reason": "No active pending transaction matched this exact amount."
+            })

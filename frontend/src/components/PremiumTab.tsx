@@ -3,6 +3,7 @@ import { Sparkles, Check, ArrowRight } from 'lucide-react';
 import { Student } from '../types';
 import { apiCall } from '../api';
 import { useLanguage } from '../i18n';
+import { PaymentModal } from './PaymentModal';
 
 interface PremiumTabProps {
   student: Student;
@@ -13,6 +14,7 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
   const { t } = useLanguage();
   const isPremium = student.is_premium || student.plan === 'premium';
   const [loading, setLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const handleToggleDemo = async (activate: boolean) => {
     setLoading(true);
@@ -98,22 +100,29 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
 
         {/* Action Button */}
         <div className="pt-2 space-y-3">
-          <a
-            href="https://t.me/asliddin_tursunoff"
-            target="_blank"
-            rel="noreferrer"
+          <button
+            onClick={() => setShowPaymentModal(true)}
             className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
           >
             <span>{t('premium_btn')}</span>
             <ArrowRight className="w-4 h-4" />
-          </a>
+          </button>
 
-          {/* Test switcher */}
-          <div className="text-center">
+          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+            <a
+              href="https://t.me/asliddin_tursunoff"
+              target="_blank"
+              rel="noreferrer"
+              className="text-slate-500 hover:text-blue-600 transition-colors"
+            >
+              Savollar bormi? @asliddin_tursunoff
+            </a>
+
+            {/* Test switcher */}
             <button
               onClick={() => handleToggleDemo(!isPremium)}
               disabled={loading}
-              className="text-[11px] font-medium text-slate-500 hover:text-slate-800 underline transition-colors"
+              className="text-slate-400 hover:text-slate-700 underline transition-colors"
             >
               {loading
                 ? '...'
@@ -124,6 +133,16 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
           </div>
         </div>
       </div>
+
+      {/* Live P2P Payment Verification Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        studentId={student.student_id}
+        onPaymentSuccess={() => {
+          if (onPremiumUpdated) onPremiumUpdated();
+        }}
+      />
     </div>
   );
 };

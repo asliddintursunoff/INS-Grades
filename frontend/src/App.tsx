@@ -365,6 +365,7 @@ export default function App() {
           }}
           studentId={currentStudent.student_id}
           isPremium={isStudentPremium}
+          onPaymentSuccess={fetchInitialData}
           onPremiumUpdated={fetchInitialData}
           lockReason={premiumLockReason}
         />

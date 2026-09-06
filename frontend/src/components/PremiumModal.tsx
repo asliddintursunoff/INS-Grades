@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Sparkles, Check, X, ArrowRight } from 'lucide-react';
 import { apiCall } from '../api';
 import { useLanguage } from '../i18n';
+import { PaymentModal } from './PaymentModal';
 
 interface PremiumModalProps {
   isOpen: boolean;
   onClose: () => void;
   studentId: string;
   isPremium?: boolean;
+  onPaymentSuccess?: () => void;
   onPremiumUpdated?: () => void;
   lockReason?: string | null;
 }
@@ -17,11 +19,13 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
   onClose,
   studentId,
   isPremium = false,
+  onPaymentSuccess,
   onPremiumUpdated,
   lockReason,
 }) => {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -106,15 +110,13 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
 
         {/* Actions */}
         <div className="pt-2 space-y-2.5">
-          <a
-            href="https://t.me/asliddin_tursunoff"
-            target="_blank"
-            rel="noreferrer"
+          <button
+            onClick={() => setShowPaymentModal(true)}
             className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
           >
             <span>{t('premium_btn')}</span>
             <ArrowRight className="w-4 h-4" />
-          </a>
+          </button>
 
           <div className="flex items-center justify-between text-xs pt-1">
             <button
@@ -134,6 +136,21 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Live Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          onClose();
+        }}
+        studentId={studentId}
+        onPaymentSuccess={() => {
+          if (onPaymentSuccess) onPaymentSuccess();
+          if (onPremiumUpdated) onPremiumUpdated();
+          onClose();
+        }}
+      />
     </div>
   );
 };

@@ -1,4 +1,6 @@
+import uuid
 from django.db import models
+from django.utils import timezone
 
 class Professor(models.Model):
     professor_id = models.AutoField(primary_key=True)
@@ -227,3 +229,62 @@ class ClassNotificationLog(models.Model):
         unique_together = ('student', 'notification_date', 'slot_key')
         verbose_name = 'Class Notification Log'
         verbose_name_plural = 'Class Notification Logs'
+
+
+class PaymentTransaction(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    transaction_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, db_column='student_id', related_name='payments')
+    base_amount = models.IntegerField(default=10000)
+    salt = models.IntegerField(db_index=True)
+    total_amount = models.IntegerField(db_index=True)
+    card_number = models.CharField(max_length=30)
+    card_holder = models.CharField(max_length=100, default='Asliddin Tursunov')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    telegram_message_id = models.CharField(max_length=100, null=True, blank=True, unique=True)
+
+    class Meta:
+        db_table = 'payment_transactions'
+        indexes = [
+            models.Index(fields=['status', 'total_amount', 'expires_at']),
+        ]
+        verbose_name = 'Payment Transaction'
+        verbose_name_plural = 'Payment Transactions'
+
+    @property
+    def is_expired(self):
+        return self.status == 'pending' and timezone.now() > self.expires_at
+
+    def __str__(self):
+        return f"Payment {self.transaction_id} - {self.student_id} - {self.total_amount} UZS ({self.status})"
+
+
+class PaymentAuditLog(models.Model):
+    log_id = models.AutoField(primary_key=True)
+    sender = models.CharField(max_length=100, null=True, blank=True)
+    raw_message = models.TextField()
+    extracted_amount = models.IntegerField(null=True, blank=True)
+    matched_transaction = models.ForeignKey(
+        PaymentTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs'
+    )
+    is_matched = models.BooleanField(default=False)
+    error_details = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'payment_audit_logs'
+        ordering = ['-created_at']
+        verbose_name = 'Payment Audit Log'
+        verbose_name_plural = 'Payment Audit Logs'
+
+    def __str__(self):
+        return f"Audit {self.log_id} - {self.extracted_amount} UZS - Matched: {self.is_matched}"

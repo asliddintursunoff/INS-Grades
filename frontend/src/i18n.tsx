@@ -38,6 +38,23 @@ export const translations = {
     premium_only_notif: 'Telegram reminders are for Premium users only.',
     premium_close: 'Close',
 
+    // Automated Payment
+    pay_title: 'Premium Activation',
+    pay_exact_amount: 'Exact Amount to Transfer',
+    pay_salt_note: 'Important: Transfer this EXACT amount. The extra small sum serves as your unique verification code!',
+    pay_card_number: 'Bank Card Number',
+    pay_card_holder: 'Card Holder',
+    pay_copied: 'Copied!',
+    pay_waiting: 'Waiting for payment...',
+    pay_expires_in: 'Session expires in:',
+    pay_success: 'Payment Verified! ⭐',
+    pay_success_desc: 'Your INS Grades Premium subscription is active for 30 days.',
+    pay_timeout: 'Payment Session Expired',
+    pay_timeout_desc: 'If you already sent the money, contact the administrator or try again.',
+    pay_try_again: 'Try Again',
+    pay_cancel: 'Cancel',
+    pay_initiating: 'Generating payment request...',
+
     // Timetable
     all_days: 'All Days',
     change_time: 'Change Time',
@@ -112,6 +129,23 @@ export const translations = {
     premium_only_notif: 'Telegram eslatmalarini yoqish faqat Premium foydalanuvchilar uchun.',
     premium_close: 'Yopish',
 
+    // Automated Payment
+    pay_title: "Premium to'lovi",
+    pay_exact_amount: "O'tkaziladigan aniq summa",
+    pay_salt_note: "Muhim: AYNAN shu summani o'tkazing! Qo'shimcha bir necha so'm to'lovni avtomatik aniqlash uchun kerak.",
+    pay_card_number: 'Karta raqami',
+    pay_card_holder: 'Qabul qiluvchi',
+    pay_copied: 'Nusxa olindi!',
+    pay_waiting: "To'lov kutilmoqda...",
+    pay_expires_in: "To'lov vaqti:",
+    pay_success: "To'lov qabul qilindi! ⭐",
+    pay_success_desc: 'Sizning hisobingiz 30 kunga Premium qilindi.',
+    pay_timeout: "To'lov vaqti tugadi",
+    pay_timeout_desc: "Agar to'lov qilgan bo'lsangiz, administratorga murojaat qiling yoki qayta urinib ko'ring.",
+    pay_try_again: 'Qayta urinish',
+    pay_cancel: 'Bekor qilish',
+    pay_initiating: "To'lov shakllantirilmoqda...",
+
     // Timetable
     all_days: 'Barcha kunlar',
     change_time: "Vaqtni o'zgartirish",
@@ -185,6 +219,23 @@ export const translations = {
     premium_only_drop: 'Отмена предмета доступна только с Premium.',
     premium_only_notif: 'Уведомления доступны только с Premium.',
     premium_close: 'Закрыть',
+
+    // Automated Payment
+    pay_title: 'Оплата Premium',
+    pay_exact_amount: 'Точная сумма к переводу',
+    pay_salt_note: 'Важно: переведите ИМЕННО эту сумму! Небольшая разница служит уникальным кодом вашей оплаты.',
+    pay_card_number: 'Номер карты',
+    pay_card_holder: 'Получатель',
+    pay_copied: 'Скопировано!',
+    pay_waiting: 'Ожидание оплаты...',
+    pay_expires_in: 'Время на оплату:',
+    pay_success: 'Оплата подтверждена! ⭐',
+    pay_success_desc: 'Ваша подписка INS Grades Premium активирована на 30 дней.',
+    pay_timeout: 'Время сессии истекло',
+    pay_timeout_desc: 'Если вы уже перевели деньги, свяжитесь с администратором или попробуйте снова.',
+    pay_try_again: 'Попробовать снова',
+    pay_cancel: 'Отмена',
+    pay_initiating: 'Формирование платежа...',
 
     // Timetable
     all_days: 'Все дни',

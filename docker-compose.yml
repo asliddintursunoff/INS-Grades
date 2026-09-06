@@ -82,3 +82,20 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+  payment-worker:
+    build:
+      context: ./payment_worker
+      dockerfile: Dockerfile
+    environment:
+      - TELEGRAM_API_ID=${TELEGRAM_API_ID:-}
+      - TELEGRAM_API_HASH=${TELEGRAM_API_HASH:-}
+      - TELETHON_SESSION_STRING=${TELETHON_SESSION_STRING:-}
+      - BACKEND_API_URL=http://backend:3000
+      - PAYMENT_SECRET_KEY=ins_pay_internal_secret_2026_x77
+      - ALLOWED_SMS_SENDERS=*
+      - TELEGRAM_BOT_TOKEN=your_token_here
+      - ADMIN_TELEGRAM_ID=${ADMIN_TELEGRAM_ID:-}
+    depends_on:
+      - backend
+    restart: unless-stopped

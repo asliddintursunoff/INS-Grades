@@ -26,6 +26,10 @@ from .views import (
     student_premium_manage,
     get_pending_class_alerts,
     mark_class_alert_sent,
+    payment_create,
+    payment_status,
+    payment_cancel,
+    payment_process_incoming_sms,
     link_telegram,
     student_homework,
     student_attendance,
@@ -93,6 +97,12 @@ urlpatterns = [
 
     # Subscription & Premium Plan
     re_path(r'^students/(?P<student_id>[^/]+)/premium/?$', student_premium_manage, name='student_premium_manage'),
+
+    # Automated P2P Payments
+    re_path(r'^payments/create/?$', payment_create, name='payment_create'),
+    re_path(r'^payments/(?P<transaction_id>[0-9a-f-]+)/status/?$', payment_status, name='payment_status'),
+    re_path(r'^payments/(?P<transaction_id>[0-9a-f-]+)/cancel/?$', payment_cancel, name='payment_cancel'),
+    re_path(r'^payments/process-incoming-sms/?$', payment_process_incoming_sms, name='payment_process_incoming_sms'),
 
     # ModelViewSet CRUD Router
     path('', include(router.urls)),

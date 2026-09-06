@@ -14,6 +14,8 @@ from .models import (
     Attendance,
     NotificationSettings,
     SentNotification,
+    PaymentTransaction,
+    PaymentAuditLog,
 )
 
 @admin.register(Professor)
@@ -56,3 +58,15 @@ class HomeworkAdmin(admin.ModelAdmin):
 class AttendanceAdmin(admin.ModelAdmin):
     list_display = ('attendance_id', 'student', 'session', 'status', 'created_at')
     list_filter = ('status',)
+
+@admin.register(PaymentTransaction)
+class PaymentTransactionAdmin(admin.ModelAdmin):
+    list_display = ('transaction_id', 'student', 'total_amount', 'status', 'created_at', 'expires_at', 'completed_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('student__student_id', 'student__full_name', 'total_amount')
+
+@admin.register(PaymentAuditLog)
+class PaymentAuditLogAdmin(admin.ModelAdmin):
+    list_display = ('log_id', 'sender', 'extracted_amount', 'is_matched', 'created_at')
+    list_filter = ('is_matched', 'created_at')
+    search_fields = ('raw_message', 'sender', 'extracted_amount')
