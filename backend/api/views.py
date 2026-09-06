@@ -1,8 +1,10 @@
+import os
 import datetime
 import uuid
 import re
 from typing import Optional
 from django.db import connection
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -59,6 +61,59 @@ def get_group_s3_url(group_name: str, existing_url: Optional[str] = None) -> str
         return existing_url
     sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "_", group_name or "").strip("._") or "group"
     return f"{DEFAULT_S3_BASE}/{sanitized}.png"
+
+
+def get_timetable_image(request, group_name):
+    """
+    Proxy or direct fetch timetable screenshot from Tigris/S3.
+    Enables secure image rendering even if S3 bucket is private.
+    """
+    clean_name = group_name.replace('.png', '')
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "_", clean_name).strip("._") or "group"
+    key = f"timetables/{sanitized}.png"
+
+    s3_key_id = (
+        os.getenv("S3_ACCESS_KEY_ID")
+        or os.getenv("AWS_ACCESS_KEY_ID")
+        or os.getenv("ACCESS_KEY_ID")
+        or "tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ"
+    ).strip()
+    s3_secret = (
+        os.getenv("S3_SECRET_ACCESS_KEY")
+        or os.getenv("AWS_SECRET_ACCESS_KEY")
+        or os.getenv("SECRET_ACCESS_KEY")
+        or os.getenv("S3_SECRET_KEY")
+        or os.getenv("AWS_SECRET_KEY")
+        or os.getenv("TIGRIS_SECRET_ACCESS_KEY")
+        or os.getenv("S3_SECRET")
+        or os.getenv("SECRET_KEY")
+        or ""
+    ).strip()
+    bucket = os.getenv("S3_BUCKET_NAME") or os.getenv("AWS_STORAGE_BUCKET_NAME") or os.getenv("BUCKET_NAME") or "resilient-module-m3qmihat"
+    endpoint = (os.getenv("S3_ENDPOINT_URL") or os.getenv("AWS_ENDPOINT_URL_S3") or "https://t3.storageapi.dev").rstrip("/")
+
+    if s3_secret:
+        try:
+            import boto3
+            from botocore.config import Config
+            s3 = boto3.client(
+                "s3",
+                endpoint_url=endpoint,
+                region_name="auto",
+                aws_access_key_id=s3_key_id,
+                aws_secret_access_key=s3_secret,
+                config=Config(s3={"addressing_style": "path"})
+            )
+            obj = s3.get_object(Bucket=bucket, Key=key)
+            img_bytes = obj["Body"].read()
+            resp = HttpResponse(img_bytes, content_type="image/png")
+            resp["Cache-Control"] = "public, max-age=86400"
+            return resp
+        except Exception:
+            pass
+
+    return HttpResponseRedirect(f"{endpoint}/{bucket}/{key}")
+
 
 
 def resolve_student_obj(id_param: Optional[str]) -> Optional[Student]:
@@ -238,6 +293,12 @@ def auth_link(request):
 
     return Response({
         "success": True,
+        "student": {
+            "student_id": student.student_id,
+            "full_name": student.full_name,
+            "group_name": student.group.group_name if student.group else "",
+            "year_of_study": student.year_of_study or 2,
+        },
         "student_id": student.student_id,
         "full_name": student.full_name,
         "group_name": student.group.group_name if student.group else "",
@@ -868,11 +929,8 @@ def student_notification_settings(request, student_id):
     })
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def link_telegram(request):
-    """Link a student_id to a Telegram account."""
-    return auth_link(request)
+# Direct alias to avoid re-wrapping Request in Request
+link_telegram = auth_link
 
 
 @api_view(['GET', 'POST'])
@@ -963,8 +1021,5 @@ def student_attendance(request, student_id):
     })
 
 
-@api_view(['GET', 'POST'])
-@permission_classes([AllowAny])
-def notification_settings(request, student_id):
-    """Legacy route alias for notification preferences."""
-    return student_notification_settings(request, student_id)
+# Direct alias to avoid re-wrapping Request in Request
+notification_settings = student_notification_settings

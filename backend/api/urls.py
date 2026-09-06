@@ -9,6 +9,7 @@ from .views import (
     auth_link,
     get_student_timetable,
     get_group_timetable,
+    get_timetable_image,
     student_classes,
     student_drop_class,
     student_retake_class,
@@ -54,6 +55,7 @@ urlpatterns = [
     re_path(r'^students/(?P<student_id>[^/]+)/timetable/?$', get_student_timetable, name='student_timetable_direct'),
     re_path(r'^timetable/student/(?P<student_id>[^/]+)/?$', get_student_timetable, name='student_timetable_legacy'),
     re_path(r'^timetable/group/(?P<group_id>\d+)/?$', get_group_timetable, name='group_timetable'),
+    re_path(r'^timetable/image/(?P<group_name>[^/]+)/?$', get_timetable_image, name='timetable_image_proxy'),
 
     # Classes, Drop & Retake
     re_path(r'^students/(?P<student_id>[^/]+)/classes/?$', student_classes, name='student_classes'),
@@ -79,6 +81,7 @@ urlpatterns = [
     # Notifications Settings
     re_path(r'^students/(?P<student_id>[^/]+)/notification-settings/?$', student_notification_settings, name='student_notification_settings'),
     re_path(r'^notifications/settings/(?P<student_id>[^/]+)/?$', student_notification_settings, name='notifications_settings_legacy'),
+    re_path(r'^notification-settings/(?P<student_id>[^/]+)/?$', student_notification_settings, name='notification_settings_legacy_direct'),
 
     # ModelViewSet CRUD Router
     path('', include(router.urls)),

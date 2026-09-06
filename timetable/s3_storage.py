@@ -51,6 +51,7 @@ class S3StorageManager:
             bucket_name
             or os.getenv("S3_BUCKET_NAME")
             or os.getenv("AWS_STORAGE_BUCKET_NAME")
+            or os.getenv("BUCKET_NAME")
             or "resilient-module-m3qmihat"
         )
         self.access_key_id = (
@@ -70,6 +71,7 @@ class S3StorageManager:
             or os.getenv("AWS_SECRET_KEY")
             or os.getenv("TIGRIS_SECRET_ACCESS_KEY")
             or os.getenv("S3_SECRET")
+            or os.getenv("SECRET_KEY")
             or ""
         ).strip()
         self.public_url_base = (
@@ -97,19 +99,25 @@ class S3StorageManager:
     def get_client(self):
         """Initializes and returns the boto3 S3 client."""
         if not boto3:
+            print("  [S3 Error] boto3 library is not installed! Please run: pip install boto3")
             return None
         if not self.is_configured():
+            print(f"  [S3 Warning] S3 credentials incomplete (key_id={bool(self.access_key_id)}, secret_key={bool(self.secret_access_key)}, bucket={bool(self.bucket_name)})")
             return None
 
         if self._client is None:
-            self._client = boto3.client(
-                "s3",
-                endpoint_url=self.endpoint_url,
-                region_name=self.region_name,
-                aws_access_key_id=self.access_key_id,
-                aws_secret_access_key=self.secret_access_key,
-                config=Config(s3={"addressing_style": "path"}),
-            )
+            try:
+                self._client = boto3.client(
+                    "s3",
+                    endpoint_url=self.endpoint_url,
+                    region_name=self.region_name,
+                    aws_access_key_id=self.access_key_id,
+                    aws_secret_access_key=self.secret_access_key,
+                    config=Config(s3={"addressing_style": "path"}),
+                )
+            except Exception as e:
+                print(f"  [S3 Error] Failed to initialize boto3 client: {e}")
+                return None
         return self._client
 
     def extract_s3_key_from_url(self, image_url: str) -> Optional[str]:
@@ -175,7 +183,6 @@ class S3StorageManager:
 
         client = self.get_client()
         if not client:
-            print(f"  [S3 Info] S3 secret key not yet configured in environment. Linking S3 URL: {standard_s3_url}")
             return standard_s3_url
 
         # 1. Remove old photo if exists

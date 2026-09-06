@@ -253,8 +253,8 @@ class TimetableTelegramBot:
             "telegram_username": username
         })
 
-        if res and "student" in res:
-            s = res["student"]
+        if res and ("student" in res or res.get("success")):
+            s = res.get("student") or res
             msg = (
                 f"✅ <b>Successfully Linked!</b>\n\n"
                 f"Welcome, <b>{s['full_name']}</b>!\n"
