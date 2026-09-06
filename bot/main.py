@@ -26,10 +26,23 @@ API_KEY = os.getenv("API_KEY", "ins_secure_api_key_2026_x89a")
 APP_URL = os.getenv("APP_URL", "https://ins-grades.vercel.app")
 
 # S3 Storage Configuration
-S3_ENDPOINT_URL = (os.getenv("S3_ENDPOINT_URL") or "https://t3.storageapi.dev").rstrip("/")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "resilient-module-m3qmihat")
-S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "")
-S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
+S3_ENDPOINT_URL = (os.getenv("S3_ENDPOINT_URL") or os.getenv("AWS_ENDPOINT_URL_S3") or "https://t3.storageapi.dev").rstrip("/")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME") or os.getenv("AWS_STORAGE_BUCKET_NAME") or "resilient-module-m3qmihat"
+S3_ACCESS_KEY_ID = (
+    os.getenv("S3_ACCESS_KEY_ID")
+    or os.getenv("AWS_ACCESS_KEY_ID")
+    or os.getenv("ACCESS_KEY_ID")
+    or "tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ"
+).strip()
+S3_SECRET_ACCESS_KEY = (
+    os.getenv("S3_SECRET_ACCESS_KEY")
+    or os.getenv("AWS_SECRET_ACCESS_KEY")
+    or os.getenv("SECRET_ACCESS_KEY")
+    or os.getenv("S3_SECRET_KEY")
+    or os.getenv("AWS_SECRET_KEY")
+    or os.getenv("TIGRIS_SECRET_ACCESS_KEY")
+    or ""
+).strip()
 
 DAY_NAMES = {
     1: "Monday",
@@ -94,10 +107,45 @@ class TimetableTelegramBot:
             return None
 
     async def send_photo(self, chat_id: int, photo_url: str, caption: str = None, reply_markup: dict = None):
-        """Send a photo to a Telegram user from URL or downloaded bytes."""
+        """Send a photo to a Telegram user from URL or downloaded S3 bytes."""
         url = f"{self.tg_base}/sendPhoto"
 
-        # 1. Try sending via Telegram URL download
+        # 1. Try fetching via S3 client directly if S3 credentials are present
+        if S3_SECRET_ACCESS_KEY:
+            try:
+                import boto3
+                from botocore.config import Config
+                s3_cli = boto3.client(
+                    "s3",
+                    endpoint_url=S3_ENDPOINT_URL,
+                    region_name="auto",
+                    aws_access_key_id=S3_ACCESS_KEY_ID,
+                    aws_secret_access_key=S3_SECRET_ACCESS_KEY,
+                    config=Config(s3={"addressing_style": "path"})
+                )
+                if f"/{S3_BUCKET_NAME}/" in photo_url:
+                    key = photo_url.split(f"/{S3_BUCKET_NAME}/")[-1].split("?")[0]
+                else:
+                    filename = os.path.basename(photo_url).split("?")[0]
+                    key = f"timetables/{filename}"
+
+                obj = s3_cli.get_object(Bucket=S3_BUCKET_NAME, Key=key)
+                img_bytes = obj["Body"].read()
+
+                files = {"photo": ("timetable.png", img_bytes, "image/png")}
+                data = {"chat_id": str(chat_id), "parse_mode": "HTML"}
+                if caption:
+                    data["caption"] = caption
+                if reply_markup:
+                    data["reply_markup"] = reply_markup
+                r = await self.client.post(url, data=data, files=files, timeout=25.0)
+                res = r.json()
+                if res.get("ok"):
+                    return res
+            except Exception as e:
+                logger.info(f"[TG S3 Direct Fetch] Could not get photo directly via boto3 ({e}), trying URL...")
+
+        # 2. Try sending direct photo URL
         payload = {
             "chat_id": chat_id,
             "photo": photo_url,
@@ -113,11 +161,10 @@ class TimetableTelegramBot:
             res = r.json()
             if res.get("ok"):
                 return res
-            logger.info(f"[TG] Direct photo URL returned: {res.get('description')}, fallback to binary upload...")
         except Exception as e:
-            logger.warning(f"[TG] send_photo via direct URL failed ({e}), attempting binary upload...")
+            logger.warning(f"[TG] send_photo via direct URL failed ({e}), trying HTTP stream upload...")
 
-        # 2. Fallback: Download image content and upload as multipart form data
+        # 3. Fallback: Download image content via HTTP and upload as multipart form data
         try:
             fetch_url = photo_url
             if fetch_url.startswith("/"):
@@ -296,6 +343,15 @@ class TimetableTelegramBot:
             tt_data = await self.api_get(f"timetable/student/{student['student_id']}/")
             if tt_data:
                 image_url = tt_data.get("timetable_image_url")
+
+        # Convert legacy /static/ path to direct S3 URL or infer from group_name
+        if image_url and (image_url.startswith("/static/") or not image_url.startswith("http")):
+            filename = os.path.basename(image_url)
+            image_url = f"{S3_ENDPOINT_URL}/{S3_BUCKET_NAME}/timetables/{filename}"
+        elif not image_url and group_name and group_name != "your group":
+            import re
+            sanitized = re.sub(r'[^A-Za-z0-9_-]', '_', group_name)
+            image_url = f"{S3_ENDPOINT_URL}/{S3_BUCKET_NAME}/timetables/{sanitized}.png"
 
         if not image_url:
             await self.send_message(

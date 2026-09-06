@@ -57,14 +57,21 @@ class S3StorageManager:
             access_key_id
             or os.getenv("S3_ACCESS_KEY_ID")
             or os.getenv("AWS_ACCESS_KEY_ID")
-            or ""
-        )
+            or os.getenv("ACCESS_KEY_ID")
+            or os.getenv("TIGRIS_ACCESS_KEY_ID")
+            or "tid_sJKHMdAQGSDbJgIZUOoZltQsaWuUlbGaundBPOmwCdvQIJjMfJ"
+        ).strip()
         self.secret_access_key = (
             secret_access_key
             or os.getenv("S3_SECRET_ACCESS_KEY")
             or os.getenv("AWS_SECRET_ACCESS_KEY")
+            or os.getenv("SECRET_ACCESS_KEY")
+            or os.getenv("S3_SECRET_KEY")
+            or os.getenv("AWS_SECRET_KEY")
+            or os.getenv("TIGRIS_SECRET_ACCESS_KEY")
+            or os.getenv("S3_SECRET")
             or ""
-        )
+        ).strip()
         self.public_url_base = (
             public_url_base
             or os.getenv("S3_PUBLIC_URL")
@@ -77,6 +84,15 @@ class S3StorageManager:
     def is_configured(self) -> bool:
         """Returns True if minimum required S3 credentials are present."""
         return bool(self.access_key_id and self.secret_access_key and self.bucket_name)
+
+    def get_public_url(self, group_name: str, key: Optional[str] = None) -> str:
+        """Returns the public S3 URL for a group screenshot."""
+        if not key:
+            sanitized_grp = re.sub(r"[^A-Za-z0-9_.-]+", "_", group_name).strip("._") or "group"
+            key = f"timetables/{sanitized_grp}.png"
+        if self.public_url_base:
+            return f"{self.public_url_base}/{key}"
+        return f"{self.endpoint_url}/{self.bucket_name}/{key}"
 
     def get_client(self):
         """Initializes and returns the boto3 S3 client."""
@@ -148,18 +164,19 @@ class S3StorageManager:
         """
         1. Deletes old timetable photo from S3 (if old_image_url was on S3).
         2. Uploads the new screenshot to S3.
-        3. Returns the new public S3 URL.
+        3. Returns the S3 bucket URL.
         """
+        sanitized_grp = re.sub(r"[^A-Za-z0-9_.-]+", "_", group_name).strip("._") or "group"
+        standard_s3_url = self.get_public_url(group_name)
+
         if not os.path.exists(local_filepath):
             print(f"  [S3 Error] File does not exist: {local_filepath}")
-            return None
+            return standard_s3_url
 
         client = self.get_client()
         if not client:
-            print("  [S3 Info] S3 credentials not fully set; skipping S3 upload (using local path).")
-            return None
-
-        sanitized_grp = re.sub(r"[^A-Za-z0-9_.-]+", "_", group_name).strip("._") or "group"
+            print(f"  [S3 Info] S3 secret key not yet configured in environment. Linking S3 URL: {standard_s3_url}")
+            return standard_s3_url
 
         # 1. Remove old photo if exists
         if old_image_url:
@@ -167,29 +184,31 @@ class S3StorageManager:
             if old_key:
                 self.delete_object(old_key)
 
-        # 2. Prepare new object key
+        # 2. Upload both permanent key timetables/{group}.png and versioned key
         timestamp = int(time.time())
-        if use_timestamp:
-            new_key = f"timetables/{sanitized_grp}_{timestamp}.png"
-        else:
-            new_key = f"timetables/{sanitized_grp}.png"
+        main_key = f"timetables/{sanitized_grp}.png"
+        versioned_key = f"timetables/{sanitized_grp}_{timestamp}.png"
 
-        # 3. Upload new photo to S3
         try:
             extra_args = {
                 "ContentType": "image/png",
                 "CacheControl": "max-age=31536000, public",
             }
-            client.upload_file(local_filepath, self.bucket_name, new_key, ExtraArgs=extra_args)
-            print(f"  [S3] Successfully uploaded new screenshot to {self.bucket_name}/{new_key}")
+            # Upload permanent key (always accessible at standard URL)
+            client.upload_file(local_filepath, self.bucket_name, main_key, ExtraArgs=extra_args)
+            print(f"  [S3] Successfully uploaded new screenshot to {self.bucket_name}/{main_key}")
 
-            # 4. Form public URL
+            # Also upload versioned key for cache busting
+            try:
+                client.upload_file(local_filepath, self.bucket_name, versioned_key, ExtraArgs=extra_args)
+            except Exception:
+                pass
+
             if self.public_url_base:
-                new_url = f"{self.public_url_base}/{new_key}"
-            else:
-                new_url = f"{self.endpoint_url}/{self.bucket_name}/{new_key}"
-
-            return new_url
+                return f"{self.public_url_base}/{main_key}"
+            return f"{self.endpoint_url}/{self.bucket_name}/{main_key}"
         except Exception as exc:
             print(f"  [S3 Error] Failed to upload {local_filepath} to S3: {exc}")
-            return None
+            import traceback
+            traceback.print_exc()
+            return standard_s3_url

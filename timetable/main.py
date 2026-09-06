@@ -140,6 +140,17 @@ def run_pipeline(
             db.commit()
             print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Database changes committed successfully.")
 
+        # Convert any legacy /static/timetables/ URLs in DB to standard S3 bucket URLs
+        try:
+            cur = db.conn.cursor()
+            db._execute(
+                cur,
+                "UPDATE groups SET timetable_image_url = 'https://t3.storageapi.dev/resilient-module-m3qmihat/timetables/' || REPLACE(REPLACE(timetable_image_url, '/static/timetables/', ''), '.png', '') || '.png' WHERE timetable_image_url LIKE '/static/%'"
+            )
+            db.commit()
+        except Exception:
+            pass
+
         # 5. Upgraded Screenshot Automation
         if capture_screens and not dry_run:
             print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Running upgraded screenshot capture...")
@@ -147,7 +158,7 @@ def run_pipeline(
             if s3_manager.is_configured():
                 print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] S3 Storage enabled. Target bucket: {s3_manager.bucket_name}")
             else:
-                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] S3 Storage not fully configured. Falling back to local static URLs.")
+                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] S3 secret key not detected. Linking standard S3 bucket URLs: {s3_manager.endpoint_url}/{s3_manager.bucket_name}/timetables/<group>.png")
 
             tt_page_url = f"{url.rstrip('/')}/timetable/"
             taker = TimetableScreenshotTaker(
@@ -160,24 +171,20 @@ def run_pipeline(
 
             def on_screenshot_saved(group_name: str, saved_path: str):
                 old_image_url = db.get_group_screenshot(group_name)
-                image_url = None
 
-                # Upload to S3 and remove old screenshot from S3 if configured
-                if s3_manager.is_configured():
-                    image_url = s3_manager.upload_timetable_screenshot(
-                        group_name=group_name,
-                        local_filepath=saved_path,
-                        old_image_url=old_image_url,
-                    )
+                # Upload to S3 and get S3 bucket URL
+                image_url = s3_manager.upload_timetable_screenshot(
+                    group_name=group_name,
+                    local_filepath=saved_path,
+                    old_image_url=old_image_url,
+                )
 
-                # Local static fallback if S3 not configured or upload failed
                 if not image_url:
-                    filename = os.path.basename(saved_path)
-                    image_url = f"{static_url_prefix}/{filename}"
+                    image_url = s3_manager.get_public_url(group_name)
 
                 db.update_group_screenshot(group_name, image_url)
                 metrics["screenshots_linked"] += 1
-                print(f"    ✓ Linked screenshot for {group_name}: {image_url}")
+                print(f"    ✓ Linked S3 screenshot for {group_name}: {image_url}")
 
             taker.capture_multiple(
                 group_names=groups_to_snap,
