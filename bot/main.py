@@ -4,8 +4,18 @@ import re
 import time
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import httpx
+
+try:
+    from zoneinfo import ZoneInfo
+    UZB_TZ = ZoneInfo("Asia/Tashkent")
+except Exception:
+    UZB_TZ = timezone(timedelta(hours=5))
+
+def get_tashkent_now() -> datetime:
+    """Returns current datetime in Asia/Tashkent timezone."""
+    return datetime.now(UZB_TZ)
 
 try:
     from dotenv import load_dotenv
@@ -839,20 +849,23 @@ class TimetableTelegramBot:
             await self.send_message(chat_id, "⚠️ No timetable found for your account.")
             return
 
+        # Explicitly use Asia/Tashkent timezone
         # Python weekday: Mon=0 ... Sun=6 -> Map to 1..7
-        current_day = datetime.now().weekday() + 1
+        now_uzb = get_tashkent_now()
+        current_day = now_uzb.weekday() + 1
         today_name = DAY_NAMES.get(current_day, "Today")
+        date_str = now_uzb.strftime("%d/%m/%Y")
 
         if current_day == 7:
-            await self.send_message(chat_id, "🎉 <b>No classes on Sunday!</b> Enjoy your weekend.", reply_markup=MAIN_MENU_KEYBOARD)
+            await self.send_message(chat_id, f"🎉 <b>No classes on Sunday ({date_str})!</b> Enjoy your weekend.", reply_markup=MAIN_MENU_KEYBOARD)
             return
 
         slots = [s for s in tt_data["timetable"] if s.get("day_of_week") == current_day]
         if not slots:
-            await self.send_message(chat_id, f"🎉 <b>No classes scheduled for {today_name}!</b> Enjoy your free day.", reply_markup=MAIN_MENU_KEYBOARD)
+            await self.send_message(chat_id, f"🎉 <b>No classes scheduled for {today_name} ({date_str})!</b> Enjoy your free day.", reply_markup=MAIN_MENU_KEYBOARD)
             return
 
-        lines = [f"📅 <b>Today's Schedule ({today_name}) - {student['group_name']}</b>\n"]
+        lines = [f"📅 <b>Today's Schedule ({today_name}, {date_str}) - {student['group_name']}</b>\n"]
         for s in slots:
             room = s.get("room") or "TBA"
             prof = s.get("professor")

@@ -133,7 +133,7 @@ original_admin_index = admin.site.index
 
 def custom_admin_index(request, extra_context=None):
     extra_context = extra_context or {}
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
     today = now.date()
     current_year = now.year
     current_month = now.month

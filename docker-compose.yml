@@ -25,6 +25,7 @@ services:
       - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
+      - TZ=Asia/Tashkent
     restart: unless-stopped
 
   frontend:
@@ -51,6 +52,7 @@ services:
       - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
+      - TZ=Asia/Tashkent
     depends_on:
       - backend
     restart: unless-stopped
@@ -68,6 +70,7 @@ services:
       - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
+      - TZ=Asia/Tashkent
     profiles:
       - tools
 
@@ -79,6 +82,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - API_URL=${API_URL:-http://backend:3000}
       - API_KEY=${API_KEY:-}
+      - TZ=Asia/Tashkent
     depends_on:
       - backend
     restart: unless-stopped
@@ -96,6 +100,7 @@ services:
       - ALLOWED_SMS_SENDERS=${ALLOWED_SMS_SENDERS:-humocardbot}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - ADMIN_TELEGRAM_ID=${ADMIN_TELEGRAM_ID:-}
+      - TZ=Asia/Tashkent
     depends_on:
       - backend
     restart: unless-stopped

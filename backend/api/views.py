@@ -1943,9 +1943,9 @@ def mark_class_alert_sent(request):
         return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
     try:
-        n_date = datetime.date.fromisoformat(notification_date_str) if notification_date_str else datetime.date.today()
+        n_date = datetime.date.fromisoformat(notification_date_str) if notification_date_str else timezone.localdate()
     except ValueError:
-        n_date = datetime.date.today()
+        n_date = timezone.localdate()
 
     ClassNotificationLog.objects.get_or_create(
         student=student,
@@ -2323,7 +2323,7 @@ def get_admin_stats(request):
     if expected_key and api_key != expected_key and not (request.user and request.user.is_staff):
         return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
     today = now.date()
     current_year = now.year
     current_month = now.month
