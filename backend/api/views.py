@@ -1217,6 +1217,17 @@ def subject_available_groups(request, subject_id):
     # Ensure list
     candidate_classes = list(classes_qs)
 
+    # Determine current active slot timing to filter out duplicate/combined sections at the exact same hour
+    curr_active_slot = None
+    if slot_id_param and str(slot_id_param).isdigit():
+        curr_active_slot = GroupTimetableSlot.objects.filter(slot_id=int(slot_id_param)).first()
+        if not curr_active_slot:
+            curr_active_slot = ScheduleOverride.objects.filter(override_id=int(slot_id_param)).first()
+    if not curr_active_slot and current_class:
+        curr_slots = list(GroupTimetableSlot.objects.filter(course_class=current_class).order_by('day_of_week', 'start_time'))
+        if session_num and 1 <= session_num <= len(curr_slots):
+            curr_active_slot = curr_slots[session_num - 1]
+
     options = []
     for c in candidate_classes:
         all_slots = list(GroupTimetableSlot.objects.filter(course_class=c).order_by('day_of_week', 'start_time'))
@@ -1228,6 +1239,16 @@ def subject_available_groups(request, subject_id):
         if session_num and 1 <= session_num <= total_sessions:
             # Single session mode: ONLY return the requested session slot
             target_slot = all_slots[session_num - 1]
+
+            # EXCLUDE DUPLICATE COMBINED SECTIONS:
+            # If another group has this exact same lecture at the exact same day and time with the same professor,
+            # it is not an alternative time — do not show it!
+            if curr_active_slot:
+                if (target_slot.day_of_week == curr_active_slot.day_of_week and
+                    target_slot.start_time == curr_active_slot.start_time and
+                    target_slot.end_time == curr_active_slot.end_time and
+                    c.group_id != student_group_id):
+                    continue
 
             has_conflict, conflict_reason = check_slot_conflict(
                 student, target_slot, ignore_slot_id=slot_id_param, ignore_subject_id=subject_id if session_num is None else None

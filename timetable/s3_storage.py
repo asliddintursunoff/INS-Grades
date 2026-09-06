@@ -162,6 +162,37 @@ class S3StorageManager:
             print(f"  [S3 Warning] Failed to delete old object '{key}': {exc}")
             return False
 
+    def cleanup_old_versioned_screenshots(self, group_prefix: Optional[str] = None):
+        """
+        Deletes any old timestamped/versioned timetable screenshots (timetables/*_*.png)
+        to prevent filling up S3 bucket storage.
+        """
+        client = self.get_client()
+        if not client:
+            return
+
+        prefix = f"timetables/{group_prefix}_" if group_prefix else "timetables/"
+        try:
+            paginator = client.get_paginator("list_objects_v2")
+            pages = paginator.paginate(Bucket=self.bucket_name, Prefix=prefix)
+            to_delete = []
+
+            for page in pages:
+                for obj in page.get("Contents", []):
+                    key = obj.get("Key", "")
+                    # Match any versioned timestamp screenshot e.g. timetables/CIE26-1_172561234.png
+                    if "_" in key and key.endswith(".png"):
+                        to_delete.append({"Key": key})
+
+            if to_delete:
+                # Delete in batches of 1000 (S3 API limit)
+                for i in range(0, len(to_delete), 1000):
+                    batch = to_delete[i:i + 1000]
+                    client.delete_objects(Bucket=self.bucket_name, Delete={"Objects": batch})
+                print(f"  [S3 Storage Cleanup] Successfully purged {len(to_delete)} old timetable screenshots.")
+        except Exception as exc:
+            print(f"  [S3 Cleanup Warning] Error purging old screenshots: {exc}")
+
     def upload_timetable_screenshot(
         self,
         group_name: str,
@@ -170,9 +201,9 @@ class S3StorageManager:
         use_timestamp: bool = True,
     ) -> Optional[str]:
         """
-        1. Deletes old timetable photo from S3 (if old_image_url was on S3).
-        2. Uploads the new screenshot to S3.
-        3. Returns the S3 bucket URL.
+        1. Deletes old timetable screenshots for this group from S3 (both old_image_url and any versioned keys).
+        2. Uploads the single canonical screenshot to S3 (timetables/{group}.png).
+        3. Returns the S3 URL with a ?v=timestamp query param for instant cache busting without storing extra files.
         """
         sanitized_grp = re.sub(r"[^A-Za-z0-9_.-]+", "_", group_name).strip("._") or "group"
         standard_s3_url = self.get_public_url(group_name)
@@ -185,35 +216,33 @@ class S3StorageManager:
         if not client:
             return standard_s3_url
 
-        # 1. Remove old photo if exists
+        # 1. Proactively purge old versioned files for this group from S3
+        self.cleanup_old_versioned_screenshots(group_prefix=sanitized_grp)
+
+        # 2. Remove explicit old photo key if different from canonical
+        main_key = f"timetables/{sanitized_grp}.png"
         if old_image_url:
             old_key = self.extract_s3_key_from_url(old_image_url)
-            if old_key:
+            if old_key and old_key != main_key:
                 self.delete_object(old_key)
 
-        # 2. Upload both permanent key timetables/{group}.png and versioned key
+        # 3. Upload single canonical file to S3 (overwriting existing in-place)
         timestamp = int(time.time())
-        main_key = f"timetables/{sanitized_grp}.png"
-        versioned_key = f"timetables/{sanitized_grp}_{timestamp}.png"
-
         try:
             extra_args = {
                 "ContentType": "image/png",
-                "CacheControl": "max-age=31536000, public",
+                "CacheControl": "public, max-age=3600, must-revalidate",
             }
-            # Upload permanent key (always accessible at standard URL)
             client.upload_file(local_filepath, self.bucket_name, main_key, ExtraArgs=extra_args)
-            print(f"  [S3] Successfully uploaded new screenshot to {self.bucket_name}/{main_key}")
+            print(f"  [S3] Successfully updated screenshot for {group_name} in {self.bucket_name}/{main_key}")
 
-            # Also upload versioned key for cache busting
-            try:
-                client.upload_file(local_filepath, self.bucket_name, versioned_key, ExtraArgs=extra_args)
-            except Exception:
-                pass
-
-            if self.public_url_base:
-                return f"{self.public_url_base}/{main_key}"
-            return f"{self.endpoint_url}/{self.bucket_name}/{main_key}"
+            base_url = (
+                f"{self.public_url_base}/{main_key}"
+                if self.public_url_base
+                else f"{self.endpoint_url}/{self.bucket_name}/{main_key}"
+            )
+            # Add cache-busting query string without creating extra files in S3!
+            return f"{base_url}?v={timestamp}" if use_timestamp else base_url
         except Exception as exc:
             print(f"  [S3 Error] Failed to upload {local_filepath} to S3: {exc}")
             import traceback

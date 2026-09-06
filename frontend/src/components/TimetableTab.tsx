@@ -185,11 +185,27 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
     groupedByDay[item.day_of_week].push(item);
   });
 
-  const displayedOptions = (changeType === 'one_time' && filterUpcomingOnly)
-    ? availableSlots.filter((o) => o.is_upcoming)
-    : availableSlots;
+  // Filter out options that meet at the EXACT same day and time as the current active slot
+  // (e.g. combined sections with other groups sharing the same room and professor at the exact same hour)
+  const nonDuplicateSlots = availableSlots.filter((option) => {
+    if (!activeSubjectSlot) return true;
+    const isSameTime = (
+      option.day_name === activeSubjectSlot.day_name &&
+      option.start_time === activeSubjectSlot.start_time &&
+      option.end_time === activeSubjectSlot.end_time
+    );
+    // If it has identical timing to current class, do not show it as an alternative
+    if (isSameTime && option.class_id !== activeSubjectSlot.class_id) {
+      return false;
+    }
+    return true;
+  });
 
-  const upcomingCount = availableSlots.filter((o) => o.is_upcoming).length;
+  const displayedOptions = (changeType === 'one_time' && filterUpcomingOnly)
+    ? nonDuplicateSlots.filter((o) => o.is_upcoming)
+    : nonDuplicateSlots;
+
+  const upcomingCount = nonDuplicateSlots.filter((o) => o.is_upcoming).length;
 
   return (
     <div className="space-y-3 sm:space-y-4 w-full max-w-full overflow-hidden">
