@@ -178,12 +178,15 @@ class ClassReminderNotifier:
         logger.info("Class Reminder Notifier service started successfully.")
         logger.info(f"Target backend: {self.api_url}")
 
+        health_server = await self.start_health_server()
+
         while self.is_running:
             try:
                 now = get_tashkent_now()
                 current_day = now.isoweekday()  # 1=Mon ... 7=Sun
                 current_hour = now.hour
                 current_minute = now.minute
+                time_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
                 # Adaptive Sleep Condition: Outside class hours
                 is_sunday = (current_day == 7)
@@ -191,8 +194,8 @@ class ClassReminderNotifier:
 
                 if is_sunday or is_night:
                     sleep_duration = 600  # 10 minutes
-                    reason = "Sunday off" if is_sunday else "Night hours (no classes)"
-                    logger.debug(f"{reason}. Sleeping for {sleep_duration}s...")
+                    reason = "Sunday off (no classes)" if is_sunday else "Night hours (no classes)"
+                    logger.info(f"{reason}. Adaptive sleep for {sleep_duration}s (Tashkent time: {time_str})...")
                     await asyncio.sleep(sleep_duration)
                     continue
 
@@ -213,8 +216,51 @@ class ClassReminderNotifier:
                 logger.error(f"Unexpected error in notifier loop: {e}", exc_info=True)
                 await asyncio.sleep(10)
 
+        if health_server:
+            health_server.close()
+            await health_server.wait_closed()
+
         await self.client.aclose()
         logger.info("Class Reminder Notifier service stopped.")
+
+    async def start_health_server(self):
+        """Starts a zero-overhead health check socket if PORT is assigned by host (e.g. Railway)."""
+        port_str = os.getenv("PORT")
+        if not port_str:
+            return None
+        try:
+            port = int(port_str)
+        except ValueError:
+            return None
+
+        async def handle_ping(reader, writer):
+            try:
+                await reader.read(256)
+                body = b'{"status":"ok","service":"class-reminder-notifier"}\n'
+                resp = (
+                    b"HTTP/1.1 200 OK\r\n"
+                    b"Content-Type: application/json\r\n"
+                    b"Content-Length: " + str(len(body)).encode() + b"\r\n"
+                    b"Connection: close\r\n\r\n" + body
+                )
+                writer.write(resp)
+                await writer.drain()
+            except Exception:
+                pass
+            finally:
+                try:
+                    writer.close()
+                    await writer.wait_closed()
+                except Exception:
+                    pass
+
+        try:
+            server = await asyncio.start_server(handle_ping, "0.0.0.0", port)
+            logger.info(f"Health check endpoint listening on port {port}")
+            return server
+        except Exception as e:
+            logger.warning(f"Could not bind health server to port {port}: {e}")
+            return None
 
     def stop(self):
         self.is_running = False
@@ -224,7 +270,8 @@ def main():
     notifier = ClassReminderNotifier(BOT_TOKEN, API_URL, API_KEY)
 
     def handle_signal(sig, frame):
-        logger.info(f"Received termination signal {sig}. Shutting down gracefully...")
+        sig_name = "SIGTERM" if sig == signal.SIGTERM else ("SIGINT" if sig == signal.SIGINT else str(sig))
+        logger.info(f"Received termination signal {sig} ({sig_name}). Shutting down gracefully...")
         notifier.stop()
 
     signal.signal(signal.SIGINT, handle_signal)
