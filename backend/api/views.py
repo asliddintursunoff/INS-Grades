@@ -163,20 +163,28 @@ def parse_group_name(group_name: str):
 
 
 def is_upcoming_slot(day_of_week: int, start_time: str) -> bool:
-    """Checks whether this lesson slot is still upcoming in the current calendar week."""
+    """
+    Checks whether this lesson slot is still upcoming in the current calendar week in Asia/Tashkent timezone.
+    On weekends (Saturday & Sunday), all weekday lessons of the upcoming week are considered upcoming.
+    """
     try:
-        now = datetime.datetime.now()
-        current_day = now.isoweekday()  # 1=Monday ... 7=Sunday
-        if day_of_week > current_day:
-            return True
-        elif day_of_week == current_day:
-            parts = str(start_time).strip().split(':')
-            slot_minutes = int(parts[0]) * 60 + int(parts[1])
-            curr_minutes = now.hour * 60 + now.minute
-            return slot_minutes >= curr_minutes
-        return False
+        from zoneinfo import ZoneInfo
+        now = datetime.datetime.now(ZoneInfo("Asia/Tashkent"))
     except Exception:
+        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
+
+    current_day = now.isoweekday()  # 1=Monday ... 7=Sunday
+    if current_day in [6, 7]:
         return True
+
+    if day_of_week > current_day:
+        return True
+    elif day_of_week == current_day:
+        parts = str(start_time).strip().split(':')
+        slot_minutes = int(parts[0]) * 60 + int(parts[1])
+        curr_minutes = now.hour * 60 + now.minute
+        return slot_minutes >= curr_minutes
+    return False
 
 
 def check_slot_conflict(student: Optional[Student], target_slot: GroupTimetableSlot, ignore_slot_id=None, ignore_subject_id=None):
@@ -657,10 +665,11 @@ def get_student_timetable(request, student_id):
             legacy_overridden_subject_ids.add(ov.course_class.subject_id)
 
     extra_subject_ids = {slot.course_class.subject_id for slot in extra_slots}
+    override_subject_ids = {ov.course_class.subject_id for ov in overrides}
 
     schedule = []
 
-    # Add base slots (omit if specific slot is overridden, or entire subject overridden in legacy mode)
+    # Add base slots (omit if specific slot is overridden, or entire subject overridden, or extra)
     for slot in base_slots:
         cc = slot.course_class
         if slot.slot_id in overridden_slot_ids:
@@ -668,6 +677,8 @@ def get_student_timetable(request, student_id):
         if not overridden_slot_ids and cc.subject_id in legacy_overridden_subject_ids:
             continue
         if cc.subject_id in extra_subject_ids:
+            continue
+        if cc.subject_id in override_subject_ids:
             continue
 
         schedule.append({
@@ -690,9 +701,11 @@ def get_student_timetable(request, student_id):
             "actual_group": group_name,
         })
 
-    # Add extra slots (permanently changed sections or retakes)
+    # Add extra slots (omit if already in override_subject_ids)
     for slot in extra_slots:
         cc = slot.course_class
+        if cc.subject_id in override_subject_ids:
+            continue
         if slot.slot_id in overridden_slot_ids:
             continue
         if not overridden_slot_ids and cc.subject_id in legacy_overridden_subject_ids:
@@ -1063,13 +1076,17 @@ def subject_available_groups(request, subject_id):
     class_id_param = request.query_params.get('class_id') or request.query_params.get('current_class_id')
     slot_id_param = request.query_params.get('slot_id')
 
-    if slot_id_param and str(slot_id_param).isdigit():
-        base_slot = GroupTimetableSlot.objects.filter(slot_id=int(slot_id_param)).select_related('course_class__professor').first()
+    if class_id_param and str(class_id_param).isdigit():
+        current_class = CourseClass.objects.filter(class_id=int(class_id_param), subject=subject).select_related('professor', 'group').first()
+
+    if not current_class and slot_id_param and str(slot_id_param).isdigit():
+        base_slot = GroupTimetableSlot.objects.filter(slot_id=int(slot_id_param), course_class__subject=subject).select_related('course_class__professor', 'course_class__group').first()
         if base_slot:
             current_class = base_slot.course_class
-
-    if not current_class and class_id_param and str(class_id_param).isdigit():
-        current_class = CourseClass.objects.filter(class_id=int(class_id_param)).select_related('professor', 'group').first()
+        else:
+            ov = ScheduleOverride.objects.filter(override_id=int(slot_id_param), course_class__subject=subject).select_related('course_class__professor', 'course_class__group').first()
+            if ov:
+                current_class = ov.course_class
 
     if not current_class and student:
         enr = StudentClassEnrollment.objects.filter(
@@ -1082,18 +1099,39 @@ def subject_available_groups(request, subject_id):
                 group=student.group, subject_id=subject_id
             ).select_related('professor', 'group').first()
 
+    # Cohort target resolution:
+    # If the student is taking this class (e.g. freshman class while student is sophomore),
+    # the available alternative sections belong to the course's cohort (current_class.group),
+    # NOT the student's personal degree year!
+    if current_class:
+        curr_info = parse_group_name(current_class.group.group_name if current_class.group else '')
+        target_yr_code = curr_info['year_code'] or stud_yr_code
+        target_major = curr_info['major'] or stud_major
+        target_faculty = curr_info['faculty'] or stud_faculty
+    else:
+        target_yr_code = stud_yr_code
+        target_major = stud_major
+        target_faculty = stud_faculty
+
     # Determine session number
     session_num = None
     session_num_param = request.query_params.get('session_number')
     if session_num_param and str(session_num_param).isdigit():
         session_num = int(session_num_param)
     elif slot_id_param and current_class:
-        # Auto-detect which session this slot corresponds to (e.g. 1st or 2nd slot in week)
-        c_slots = list(GroupTimetableSlot.objects.filter(course_class=current_class).order_by('day_of_week', 'start_time'))
-        for idx, s in enumerate(c_slots, 1):
-            if str(s.slot_id) == str(slot_id_param):
-                session_num = idx
-                break
+        # Check if slot_id is an override with session tag in valid_to
+        ov = ScheduleOverride.objects.filter(override_id=int(slot_id_param), course_class__subject=subject).first()
+        if ov and ov.valid_to:
+            digs = re.findall(r'session_(\d+)', ov.valid_to)
+            if digs:
+                session_num = int(digs[0])
+        if not session_num:
+            # Auto-detect which session this slot corresponds to (e.g. 1st or 2nd slot in week)
+            c_slots = list(GroupTimetableSlot.objects.filter(course_class=current_class).order_by('day_of_week', 'start_time'))
+            for idx, s in enumerate(c_slots, 1):
+                if str(s.slot_id) == str(slot_id_param):
+                    session_num = idx
+                    break
 
     # Build candidate classes query
     classes_qs = CourseClass.objects.filter(subject=subject).select_related('group', 'professor')
@@ -1102,24 +1140,24 @@ def subject_available_groups(request, subject_id):
         # STRICT PROFESSOR FILTER: Must be taught by the same professor!
         classes_qs = classes_qs.filter(professor=current_class.professor)
 
-        # STRICT MAJOR & YEAR FILTER: Must match student's major prefix and year code (e.g. CSE25)
-        if stud_major and stud_yr_code:
-            major_matched = classes_qs.filter(group__group_name__startswith=f"{stud_major}{stud_yr_code}")
+        # STRICT MAJOR & COHORT YEAR FILTER:
+        # e.g. CIE26 for freshman or CSE25 for sophomore
+        if target_major and target_yr_code:
+            major_matched = classes_qs.filter(group__group_name__startswith=f"{target_major}{target_yr_code}")
             if major_matched.exists():
                 classes_qs = major_matched
             else:
-                # If professor has sections in related major in same faculty & year (e.g. ICE25 vs CSE25)
-                cand_list = []
-                for c in classes_qs:
-                    c_inf = parse_group_name(c.group.group_name)
-                    if c_inf['faculty'] == stud_faculty and c_inf['year_code'] == stud_yr_code:
-                        cand_list.append(c)
+                cand_list = [
+                    c for c in classes_qs
+                    if parse_group_name(c.group.group_name)['faculty'] == target_faculty
+                    and parse_group_name(c.group.group_name)['year_code'] == target_yr_code
+                ]
                 if cand_list:
                     classes_qs = cand_list
     else:
         # Browsing without current class (e.g. retake catalog)
-        if stud_faculty:
-            cand_list = [c for c in classes_qs if parse_group_name(c.group.group_name)['faculty'] == stud_faculty]
+        if target_faculty:
+            cand_list = [c for c in classes_qs if parse_group_name(c.group.group_name)['faculty'] == target_faculty]
             if cand_list:
                 classes_qs = cand_list
 

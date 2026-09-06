@@ -5,7 +5,6 @@ import {
   MapPin, 
   User, 
   RefreshCw, 
-  Eye, 
   Sparkles, 
   Check, 
   AlertCircle, 
@@ -28,7 +27,6 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
   const [data, setData] = useState<TimetableResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null); // null = all days
-  const [showImageModal, setShowImageModal] = useState(false);
 
   // Other slots / Group switch modal state
   const [activeSubjectSlot, setActiveSubjectSlot] = useState<ScheduleSlot | null>(null);
@@ -170,53 +168,50 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
 
   return (
     <div className="space-y-3 sm:space-y-4 w-full max-w-full overflow-hidden">
-      {/* Group Header & Official Timetable Link */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
+      {/* Group Header */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
-              {data?.group_name ? `${data.group_name} Timetable` : 'INS grades Schedule'}
+              {data?.group_name ? `${data.group_name} Schedule` : 'My Schedule'}
             </h2>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-              Live Feed
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              Weekly Classes
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Missed a class? Tap any slot below to pick an upcoming make-up lesson for this week.
+            Click any class below to change your time or choose a make-up lesson if you missed a class.
           </p>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {data?.timetable_image_url && (
-            <button
-              onClick={() => setShowImageModal(true)}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors shadow-2xs"
-            >
-              <Eye className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>Timetable Photo</span>
-            </button>
-          )}
           <button
             onClick={fetchTimetable}
             disabled={loading}
-            className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 transition-colors shrink-0"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors shadow-2xs"
             title="Refresh schedule"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-600' : 'text-slate-600'}`} />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      {/* One-time Make-up Explanatory Alert Banner */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border border-blue-200/80 rounded-2xl p-3 sm:p-3.5 text-xs text-blue-900 flex items-start gap-2.5">
+      {/* Quick Help Banner */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50/40 border border-blue-200/80 rounded-2xl p-3.5 text-xs text-blue-950 flex items-start gap-3">
         <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-        <div className="space-y-0.5 min-w-0">
-          <span className="font-bold text-slate-900 block">
-            Missed a Class or Need to Reschedule?
+        <div className="space-y-1 min-w-0">
+          <span className="font-bold text-slate-900 block text-xs">
+            How changing class times works:
           </span>
-          <p className="text-slate-600 text-[11px] leading-relaxed">
-            You can select an <strong>upcoming lesson</strong> from another group as a <strong>one-time make-up</strong> for this week. Next week your timetable automatically reverts to your regular schedule!
-          </p>
+          <div className="text-slate-600 text-[11px] leading-relaxed space-y-0.5">
+            <p>
+              • <strong>⚡ One-Time Make-Up:</strong> If you missed or will miss a class this week, pick an upcoming lecture with the same professor to earn your attendance. Reverts back to normal next week.
+            </p>
+            <p>
+              • <strong>🔄 Permanent Change:</strong> Switch this class to another section for the rest of the semester.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -406,33 +401,6 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
                 </div>
               );
             })}
-        </div>
-      )}
-
-      {/* Official Timetable Image Modal */}
-      {showImageModal && data?.timetable_image_url && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-4 shadow-2xl border border-slate-200 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4 text-blue-600" />
-                {data.group_name} Official Timetable
-              </h3>
-              <button
-                onClick={() => setShowImageModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 max-h-[75vh] flex items-center justify-center">
-              <img
-                src={data.timetable_image_url}
-                alt={`${data.group_name} Timetable`}
-                className="w-full h-auto object-contain max-h-[70vh]"
-              />
-            </div>
-          </div>
         </div>
       )}
 
@@ -626,7 +594,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
                             {/* Upcoming / Weekly badge */}
                             {changeType === 'permanent' ? (
                               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                Weekly Slot
+                                Every Week
                               </span>
                             ) : option.is_upcoming ? (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
@@ -635,7 +603,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
                               </span>
                             ) : (
                               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
-                                Past this week
+                                Already passed this week
                               </span>
                             )}
 
@@ -723,8 +691,8 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({ studentId, onRefresh
                                   : option.is_own_group
                                   ? 'Revert to Primary'
                                   : changeType === 'permanent'
-                                  ? 'Change to This'
-                                  : 'Pick Make-up'}
+                                  ? 'Switch to This Time'
+                                  : 'Choose Make-Up'}
                               </span>
                             </button>
                           )}
