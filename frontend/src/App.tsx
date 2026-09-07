@@ -262,7 +262,7 @@ export default function App() {
                 </p>
                 <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-slate-600 pl-0.5">
                   <li>Open the Telegram bot: <span className="font-semibold text-blue-600">@{botUsername}</span></li>
-                  <li>Send your <b>Student ID</b> (e.g. <code>U2410252</code>)</li>
+                  <li>Send your <b>Student ID</b> (e.g. <code>U2310010</code>)</li>
                   <li>Select your course and group</li>
                 </ol>
               </div>

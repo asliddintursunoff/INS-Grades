@@ -400,7 +400,7 @@ class TimetableTelegramBot:
             f"• 🔔 <b>Class reminders</b>\n"
             f"• 📝 <b>Homework reminders</b>\n"
             f"• 🚀 <i>...more in Mini App!</i>\n\n"
-            f"👉 Please enter your <b>Student ID</b> (e.g. <code>U2410252</code>) to connect:"
+            f"👉 Please enter your <b>Student ID</b> (e.g. <code>U2310010</code>) to connect:"
         )
         inline_kb = {
             "inline_keyboard": [
@@ -518,7 +518,49 @@ class TimetableTelegramBot:
         # 2. Check if student sent their Student ID candidate
         if not text:
             return
-        candidate = text.upper().strip()
+
+        # Handle password input for protected student ID (U2410252)
+        if state and state.get("step") == "WAITING_PASSWORD":
+            if text in ("🔙 Ortga", "ortga", "/cancel", "cancel", "Bekor qilish"):
+                self.user_states.pop(tg_id, None)
+                await self.send_message(chat_id, "❌ Bekor qilindi.", reply_markup=get_user_keyboard(tg_id))
+                return
+
+            expected_password = (
+                os.environ.get("U2410252_PASSWORD")
+                or os.environ.get("STUDENT_PASSWORD")
+                or os.environ.get("ADMIN_PASSWORD")
+                or os.environ.get("SPECIAL_PASSWORD")
+                or os.environ.get("PASSWORD")
+            )
+            if expected_password and text == expected_password.strip():
+                candidate = state.get("student_id", "U2410252")
+                self.user_states.pop(tg_id, None)
+            else:
+                await self.send_message(
+                    chat_id,
+                    "❌ <b>Noto'g'ri parol!</b>\n\n"
+                    "Iltimos, qaytadan urinib ko'ring yoki bekor qilish uchun <b>🔙 Ortga</b> tugmasini bosing:",
+                    reply_markup=BACK_KEYBOARD
+                )
+                return
+        else:
+            candidate = text.upper().strip()
+
+            # Protected Student ID check: require password only for U2410252
+            if candidate == "U2410252":
+                self.user_states[tg_id] = {
+                    "step": "WAITING_PASSWORD",
+                    "student_id": "U2410252"
+                }
+                await self.send_message(
+                    chat_id,
+                    "🔒 <b>Ushbu talaba ID himoyalangan.</b>\n\n"
+                    "Iltimos, parolni kiriting:\n\n"
+                    "(Bekor qilish uchun <b>🔙 Ortga</b> tugmasini bosing)",
+                    reply_markup=BACK_KEYBOARD
+                )
+                return
 
         # Check if student exists in database
         student_obj = await self.api_get(f"students/{candidate}/")

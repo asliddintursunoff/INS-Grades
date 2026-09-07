@@ -345,7 +345,7 @@ def demo_students(request):
         first_group = Group.objects.filter(group_name__icontains='CIE').first() or Group.objects.first()
         if first_group:
             default_student = Student.objects.create(
-                student_id="U2410252",
+                student_id="U2310010",
                 full_name="Asliddin Xolmatov",
                 group=first_group,
                 year_of_study=2,
