@@ -47,7 +47,7 @@ class ClassReminderNotifier:
         self.bot_token = bot_token
         self.api_url = api_url
         self.api_key = api_key
-        self.client = httpx.AsyncClient(timeout=20.0)
+        self.client = httpx.AsyncClient(timeout=30.0)
         self.is_running = True
 
     async def api_get(self, endpoint: str):
@@ -55,7 +55,7 @@ class ClassReminderNotifier:
         url = f"{self.api_url}/api/{endpoint.lstrip('/')}"
         headers = {"X-API-KEY": self.api_key}
         try:
-            r = await self.client.get(url, headers=headers, timeout=10.0)
+            r = await self.client.get(url, headers=headers, timeout=25.0)
             if r.status_code == 200:
                 return r.json()
             logger.warning(f"Backend GET {url} returned HTTP {r.status_code}: {r.text[:150]}")
@@ -101,13 +101,23 @@ class ClassReminderNotifier:
 
     def format_reminder_message(self, alert: dict) -> str:
         """Constructs an aesthetic, crystal-clear notification message."""
-        minutes_left = alert.get("minutes_left", 15)
-        if minutes_left <= 0:
+        minutes_left = alert.get("minutes_left")
+        minutes_before = alert.get("minutes_before")
+
+        # Prefer user-selected minutes_before if actual time is within the tight 2-min latency window
+        if minutes_before is not None and minutes_left is not None and abs(minutes_left - minutes_before) <= 2:
+            display_minutes = minutes_before
+        elif minutes_left is not None:
+            display_minutes = minutes_left
+        else:
+            display_minutes = 15
+
+        if display_minutes <= 0:
             time_phrase = "starting now"
-        elif minutes_left == 1:
+        elif display_minutes == 1:
             time_phrase = "starts in 1 minute"
         else:
-            time_phrase = f"starts in {minutes_left} minutes"
+            time_phrase = f"starts in {display_minutes} minutes"
 
         is_makeup = alert.get("is_one_time", False)
         makeup_badge = "⚡ <b>One-Time Make-Up Lecture (This week only)</b>\n" if is_makeup else ""
@@ -169,44 +179,42 @@ class ClassReminderNotifier:
 
     async def run(self):
         """
-        High-precision daemon loop with adaptive sleep:
-          - During active lecture hours (07:30 to 20:30, Mon-Sat):
-            Sleeps until exact top of the next minute (:00) for exact timing.
-          - During nights (20:30 to 07:30) and Sundays:
-            Sleeps in 10-minute blocks to minimize CPU and power usage.
+        High-precision daemon loop with ultra-low latency:
+          - Active lecture hours (06:00 to 22:30, Mon-Sat):
+            Polls every 20 seconds (:00, :20, :40) to guarantee latency < 20s (well below 2 min limit).
+          - Night hours (22:30 to 06:00) and Sundays:
+            Polls every 60 seconds (1 minute) to ensure no morning lecture reminders are missed.
         """
         logger.info("Class Reminder Notifier service started successfully.")
         logger.info(f"Target backend: {self.api_url}")
 
         health_server = await self.start_health_server()
 
+        POLL_INTERVAL = 20.0  # seconds between checks during active hours
+
         while self.is_running:
             try:
                 now = get_tashkent_now()
                 current_day = now.isoweekday()  # 1=Mon ... 7=Sun
                 current_hour = now.hour
-                current_minute = now.minute
-                time_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
-                # Adaptive Sleep Condition: Outside class hours
+                # Outside class hours: check every 60s (zero chance of sleeping through morning lectures)
                 is_sunday = (current_day == 7)
-                is_night = (current_hour < 7 or (current_hour == 7 and current_minute < 30) or current_hour >= 21)
+                is_night = (current_hour < 6 or current_hour >= 23)
 
                 if is_sunday or is_night:
-                    sleep_duration = 600  # 10 minutes
-                    reason = "Sunday off (no classes)" if is_sunday else "Night hours (no classes)"
-                    logger.info(f"{reason}. Adaptive sleep for {sleep_duration}s (Tashkent time: {time_str})...")
-                    await asyncio.sleep(sleep_duration)
+                    await asyncio.sleep(60)
                     continue
 
-                # Active Lecture Hours: Check for pending alerts
+                # Active lecture hours: Check for pending alerts
                 await self.process_pending_alerts()
 
-                # High Precision Sleep: Sync with top of the next minute (:00)
+                # High-precision sleep: Sync with 20-second boundaries (:00, :20, :40)
                 now_after = get_tashkent_now()
-                sleep_seconds = 60.0 - now_after.second - (now_after.microsecond / 1_000_000.0)
-                if sleep_seconds <= 0.05:
-                    sleep_seconds = 60.0
+                remainder = (now_after.second % POLL_INTERVAL) + (now_after.microsecond / 1_000_000.0)
+                sleep_seconds = POLL_INTERVAL - remainder
+                if sleep_seconds <= 0.1:
+                    sleep_seconds = POLL_INTERVAL
 
                 await asyncio.sleep(sleep_seconds)
 
@@ -214,7 +222,7 @@ class ClassReminderNotifier:
                 break
             except Exception as e:
                 logger.error(f"Unexpected error in notifier loop: {e}", exc_info=True)
-                await asyncio.sleep(10)
+                await asyncio.sleep(5)
 
         if health_server:
             health_server.close()

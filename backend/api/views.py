@@ -1846,8 +1846,8 @@ def get_pending_class_alerts(request):
             "server_time": now.strftime("%Y-%m-%d %H:%M:%S")
         })
 
-    # Between 21:00 and 07:00, no classes take place
-    if now.hour < 7 or now.hour >= 21:
+    # Between 23:00 and 06:00, no classes or early reminders take place
+    if now.hour < 6 or now.hour >= 23:
         return Response({
             "alerts": [],
             "status": "outside_lecture_hours",
@@ -1896,8 +1896,13 @@ def get_pending_class_alerts(request):
             slot_start_min = int(time_parts[0]) * 60 + int(time_parts[1])
             diff_min = slot_start_min - current_minutes
 
-            # Trigger alert when diff is within the target window (e.g. within [0, minutes_before])
-            if 0 <= diff_min <= minutes_before:
+            # Target window: student chose minutes_before (e.g. 30).
+            # We strictly enforce maximum latency of 2 minutes:
+            # Alert is dispatched only when diff_min is in [minutes_before - 2, minutes_before].
+            # (e.g., for 30 min before, diff_min must be between 28 and 30).
+            # Reminders later than 2 minutes are strictly suppressed to maintain exact precision.
+            min_allowed_diff = max(0, minutes_before - 2)
+            if min_allowed_diff <= diff_min <= minutes_before:
                 slot_key = f"{slot['subject_short']}_{slot['start_time']}_{current_day}"
                 if (student.student_id, slot_key) in sent_logs:
                     continue
@@ -1915,6 +1920,7 @@ def get_pending_class_alerts(request):
                     "start_time": slot['start_time'],
                     "end_time": slot['end_time'],
                     "minutes_left": diff_min,
+                    "minutes_before": minutes_before,
                     "is_one_time": slot.get('is_one_time', False),
                     "slot_key": slot_key,
                     "notification_date": today_date_str,
