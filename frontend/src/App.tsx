@@ -6,12 +6,11 @@ import { SettingsTab } from './components/SettingsTab';
 import { TimetableTab } from './components/TimetableTab';
 import { PremiumTab } from './components/PremiumTab';
 import { PremiumModal } from './components/PremiumModal';
-import { HomeworkTab } from './components/HomeworkTab';
 import { Student } from './types';
 import { apiCall, getTelegramUser } from './api';
 import { useLanguage } from './i18n';
 
-type TabKey = 'timetable' | 'classes' | 'homework' | 'premium' | 'settings';
+type TabKey = 'timetable' | 'classes' | 'premium' | 'settings';
 
 export default function App() {
   const { t } = useLanguage();
@@ -130,7 +129,7 @@ export default function App() {
       <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-5 overflow-x-hidden">
         {/* Navigation Tabs */}
         <div className="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-2xs w-full max-w-full">
-          <nav className={`grid ${isStudentPremium ? 'grid-cols-4' : 'grid-cols-5'} gap-1`} aria-label="Tabs">
+          <nav className={`grid ${isStudentPremium ? 'grid-cols-3' : 'grid-cols-4'} gap-1`} aria-label="Tabs">
             <button
               onClick={() => setActiveTab('timetable')}
               className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
@@ -153,18 +152,6 @@ export default function App() {
             >
               <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               <span className="truncate">{t('courses')}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('homework')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
-                activeTab === 'homework'
-                  ? 'bg-blue-600 text-white shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="truncate">{t('homework')}</span>
             </button>
 
             {!isStudentPremium && (
@@ -218,9 +205,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'homework' && (
-              <HomeworkTab />
-            )}
+
 
             {activeTab === 'premium' && (
               <PremiumTab
