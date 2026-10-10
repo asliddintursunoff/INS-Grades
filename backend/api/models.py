@@ -136,35 +136,6 @@ class StudentClassEnrollment(models.Model):
         verbose_name_plural = 'Enrollments'
 
 
-class Homework(models.Model):
-    homework_id = models.AutoField(primary_key=True)
-    course_class = models.ForeignKey(CourseClass, on_delete=models.CASCADE, db_column='class_id', related_name='homeworks')
-    title = models.CharField(max_length=255)
-    description = models.TextField(null=True, blank=True)
-    deadline = models.CharField(max_length=100)
-
-    class Meta:
-        db_table = 'homeworks'
-        verbose_name = 'Homework'
-        verbose_name_plural = 'Homeworks'
-
-
-class HomeworkSubmission(models.Model):
-    submission_id = models.AutoField(primary_key=True)
-    homework = models.ForeignKey(Homework, on_delete=models.CASCADE, db_column='homework_id', related_name='submissions')
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, db_column='student_id', related_name='homework_submissions')
-    is_done = models.IntegerField(default=0)
-    is_active = models.IntegerField(default=1)
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    grade = models.FloatField(null=True, blank=True)
-
-    class Meta:
-        db_table = 'homework_submissions'
-        unique_together = ('homework', 'student')
-        verbose_name = 'Homework Submission'
-        verbose_name_plural = 'Homework Submissions'
-
-
 class LectureSession(models.Model):
     session_id = models.AutoField(primary_key=True)
     course_class = models.ForeignKey(CourseClass, on_delete=models.CASCADE, db_column='class_id', related_name='lecture_sessions')

@@ -268,7 +268,7 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
                   {successResult.message}
                 </p>
                 <p className="text-xs text-emerald-700 font-medium pt-1">
-                  The class schedule has been updated in your timetable and assignments are now active.
+                  The class schedule has been updated in your timetable.
                 </p>
               </div>
               <div className="pt-3">

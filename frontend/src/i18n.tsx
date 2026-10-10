@@ -7,7 +7,6 @@ export const translations = {
     // Navigation
     timetable: 'Timetable',
     courses: 'Courses',
-    homework: 'My Homework',
     premium: 'Premium',
     profile: 'Profile',
 
@@ -16,11 +15,7 @@ export const translations = {
     plan_premium: 'PREMIUM ⭐',
     upgrade: 'Upgrade',
 
-    // Homework
-    homework_title: 'My Homework',
-    homework_msg: 'Will be available from 14 September for premium users.',
-
-    // Premium Features Copy (6 Exact Points)
+    // Premium Features Copy (5 Exact Points)
     premium_title: 'INS Grades Premium',
     premium_price: '10,000 UZS',
     premium_period: '/ month',
@@ -29,7 +24,6 @@ export const translations = {
     premium_feat3: '📅 Auto-Updating Timetable: Your timetable automatically updates whenever your classes or sections change, so you always have the latest schedule in one place.',
     premium_feat4: '🔔 Telegram Class Reminders: Get automatic reminders before every class on Telegram, so you know where and when you need to be.',
     premium_feat5: '📚 Course Drop & Retake: Drop courses you no longer need or register for retakes directly and manage everything from one place.',
-    premium_feat6: '📝 Homework Tracker: Keep all your assignments and deadlines organized in one place. Available from September 14.',
     premium_btn: 'Get Premium',
     premium_active: 'Active Plan',
     premium_active_title: 'Your Premium Subscription is Active ⭐',
@@ -162,7 +156,7 @@ export const translations = {
     available_retakes: 'Available Retake Courses',
     add_retake: 'Add Retake Course',
     enrolled_courses_title: 'Enrolled Courses & Academic Load',
-    enrolled_courses_desc: 'Manage your registered subjects. Dropping a course cancels upcoming deadlines; retaking adds it back to your timetable.',
+    enrolled_courses_desc: 'Manage your registered subjects. Dropping a course removes it from your timetable; retaking adds it back to your timetable.',
     currently_enrolled: 'Currently Enrolled Courses:',
     courses_count: 'courses',
     loading_courses: 'Loading enrolled courses...',
@@ -204,7 +198,6 @@ export const translations = {
     // Navigation
     timetable: 'Dars jadvali',
     courses: 'Fanlar',
-    homework: 'Vazifalarim',
     premium: 'Premium',
     profile: 'Profil',
 
@@ -213,11 +206,7 @@ export const translations = {
     plan_premium: 'PREMIUM ⭐',
     upgrade: 'Olish',
 
-    // Homework
-    homework_title: 'Mening vazifalarim',
-    homework_msg: '14-sentabrdan boshlab premium foydalanuvchilar uchun taqdim etiladi.',
-
-    // Premium Features Copy (6 Exact Points)
+    // Premium Features Copy (5 Exact Points)
     premium_title: 'INS Grades Premium',
     premium_price: "10 000 so'm",
     premium_period: '/ oyiga',
@@ -226,7 +215,6 @@ export const translations = {
     premium_feat3: "📅 Avtomatik yangilanadigan jadval: Darslaringiz yoki guruhlaringiz o'zgarganda jadvalingiz avtomatik yangilanadi va doim eng so'nggi holatda turadi.",
     premium_feat4: "🔔 Telegram dars eslatmalari: Har bir darsdan oldin Telegramda avtomatik eslatma oling va qayerda, qachon bo'lishingizni doim biling.",
     premium_feat5: "📚 Fanlarni bekor qilish va Retake: Keraksiz fanlarni tashlang (drop) yoki to'g'ridan-to'g'ri retake fanlarga yozilib, hammasini bir joydan boshqaring.",
-    premium_feat6: "📝 Vazifalar nazorati: Barcha topshiriqlar va muddatlarni bir joyda tartibli saqlang. 14-sentabrdan taqdim etiladi.",
     premium_btn: 'Premium olish',
     premium_active: 'Faol Tarif',
     premium_active_title: 'Sizda Premium tarif faol ⭐',
@@ -359,7 +347,7 @@ export const translations = {
     available_retakes: 'Mavjud retake fanlar',
     add_retake: "Retake fan qo'shish",
     enrolled_courses_title: 'O\'qiyotgan fanlaringiz va yuklama',
-    enrolled_courses_desc: 'Ro\'yxatdan o\'tgan fanlaringizni boshqaring. Fanni bekor qilish (drop) vazifalarni bekor qiladi, retake olish uni yana jadvalingizga qaytaradi.',
+    enrolled_courses_desc: 'Ro\'yxatdan o\'tgan fanlaringizni boshqaring. Fanni bekor qilish (drop) uni jadvalingizdan olib tashlaydi, retake olish uni yana jadvalingizga qaytaradi.',
     currently_enrolled: 'Hozirda ro\'yxatdan o\'tgan fanlar:',
     courses_count: 'ta fan',
     loading_courses: 'Fanlar yuklanmoqda...',
@@ -401,7 +389,6 @@ export const translations = {
     // Navigation
     timetable: 'Расписание',
     courses: 'Курсы',
-    homework: 'Мои ДЗ',
     premium: 'Премиум',
     profile: 'Профиль',
 
@@ -410,11 +397,7 @@ export const translations = {
     plan_premium: 'ПРЕМИУМ ⭐',
     upgrade: 'Купить',
 
-    // Homework
-    homework_title: 'Мои домашние задания',
-    homework_msg: 'Будет доступно с 14 сентября для премиум-пользователей.',
-
-    // Premium Features Copy (6 Exact Points)
+    // Premium Features Copy (5 Exact Points)
     premium_title: 'INS Grades Premium',
     premium_price: '10 000 сум',
     premium_period: '/ месяц',
@@ -423,7 +406,6 @@ export const translations = {
     premium_feat3: '📅 Автообновление расписания: Ваше расписание обновляется автоматически при любых изменениях, поэтому актуальные пары всегда под рукой.',
     premium_feat4: '🔔 Уведомления в Telegram: Получайте автоматические напоминания перед каждой парой в Telegram, чтобы точно знать время и аудиторию.',
     premium_feat5: '📚 Отмена курсов и Retake: Отменяйте ненужные предметы (drop) или записывайтесь на Retake и управляйте всем в одном месте.',
-    premium_feat6: '📝 Трекер домашних заданий: Все задания и дедлайны собраны в одном удобном месте. Доступно с 14 сентября.',
     premium_btn: 'Оформить Premium',
     premium_active: 'Активный план',
     premium_active_title: 'Ваша подписка Premium активна ⭐',
@@ -556,7 +538,7 @@ export const translations = {
     available_retakes: 'Доступные Retake курсы',
     add_retake: 'Добавить Retake курс',
     enrolled_courses_title: 'Изучаемые предметы и академическая нагрузка',
-    enrolled_courses_desc: 'Управляйте вашими курсами. Отмена курса (drop) отменяет дедлайны; повторный курс (retake) возвращает его в расписание.',
+    enrolled_courses_desc: 'Управляйте вашими курсами. Отмена курса (drop) убирает его из расписания; повторный курс (retake) возвращает его в расписание.',
     currently_enrolled: 'Текущие предметы:',
     courses_count: 'курсов',
     loading_courses: 'Загрузка курсов...',

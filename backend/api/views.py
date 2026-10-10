@@ -24,8 +24,6 @@ from .models import (
     GroupTimetableSlot,
     ScheduleOverride,
     StudentClassEnrollment,
-    Homework,
-    HomeworkSubmission,
     LectureSession,
     Attendance,
     NotificationSettings,
@@ -43,8 +41,6 @@ from .serializers import (
     CourseClassSerializer,
     GroupTimetableSlotSerializer,
     ScheduleOverrideSerializer,
-    HomeworkSerializer,
-    HomeworkSubmissionSerializer,
     LectureSessionSerializer,
     AttendanceSerializer,
     NotificationSettingsSerializer,
@@ -1717,66 +1713,6 @@ def student_premium_manage(request, student_id):
 
 # Direct alias to avoid re-wrapping Request in Request
 link_telegram = auth_link
-
-
-@api_view(['GET', 'POST'])
-@permission_classes([AllowAny])
-def student_homework(request, student_id):
-    """List homework for a student or update homework status."""
-    student = resolve_student_obj(student_id)
-    if not student:
-        return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
-        homeworks = Homework.objects.filter(
-            course_class__group=student.group
-        ).select_related('course_class__subject', 'course_class__professor')
-
-        submissions = {
-            s.homework_id: s for s in HomeworkSubmission.objects.filter(student=student)
-        }
-
-        results = []
-        for hw in homeworks:
-            sub = submissions.get(hw.homework_id)
-            results.append({
-                "homework_id": hw.homework_id,
-                "title": hw.title,
-                "description": hw.description,
-                "deadline": hw.deadline,
-                "subject": hw.course_class.subject.full_name,
-                "subject_short": hw.course_class.subject.short_name,
-                "professor": hw.course_class.professor.full_name,
-                "is_done": bool(sub.is_done) if sub else False,
-                "grade": sub.grade if sub else None,
-                "submitted_at": sub.submitted_at if sub else None
-            })
-
-        return Response(results)
-
-    elif request.method == 'POST':
-        homework_id = request.data.get('homework_id')
-        is_done = request.data.get('is_done', True)
-        if not homework_id:
-            return Response({"error": "homework_id is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        hw = get_object_or_404(Homework, homework_id=homework_id)
-        sub, created = HomeworkSubmission.objects.get_or_create(
-            homework=hw,
-            student=student,
-            defaults={'is_done': 1 if is_done else 0, 'submitted_at': datetime.datetime.now(datetime.timezone.utc)}
-        )
-        if not created:
-            sub.is_done = 1 if is_done else 0
-            if is_done and not sub.submitted_at:
-                sub.submitted_at = datetime.datetime.now(datetime.timezone.utc)
-            sub.save()
-
-        return Response({
-            "message": "Homework status updated.",
-            "homework_id": hw.homework_id,
-            "is_done": bool(sub.is_done)
-        })
 
 
 @api_view(['GET'])

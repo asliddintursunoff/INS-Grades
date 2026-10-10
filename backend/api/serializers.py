@@ -8,8 +8,6 @@ from .models import (
     GroupTimetableSlot,
     ScheduleOverride,
     StudentClassEnrollment,
-    Homework,
-    HomeworkSubmission,
     LectureSession,
     Attendance,
     NotificationSettings,
@@ -84,21 +82,6 @@ class ScheduleOverrideSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ScheduleOverride
-        fields = '__all__'
-
-
-class HomeworkSubmissionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = HomeworkSubmission
-        fields = '__all__'
-
-
-class HomeworkSerializer(serializers.ModelSerializer):
-    course_class = CourseClassSerializer(read_only=True)
-    submissions = HomeworkSubmissionSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Homework
         fields = '__all__'
 
 

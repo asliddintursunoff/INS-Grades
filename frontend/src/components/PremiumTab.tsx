@@ -121,15 +121,6 @@ export const PremiumTab: React.FC<PremiumTabProps> = ({ student, onPremiumUpdate
               {t('premium_feat5')}
             </p>
           </div>
-
-          <div className="flex items-start gap-3">
-            <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-              <Check className="w-3.5 h-3.5" />
-            </div>
-            <p className="text-xs font-semibold text-slate-700 leading-snug">
-              {t('premium_feat6')}
-            </p>
-          </div>
         </div>
 
         {/* Action Button */}

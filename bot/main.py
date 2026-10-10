@@ -348,7 +348,6 @@ class TimetableTelegramBot:
                 f"• ⚡ <b>Find flexible time lessons</b>\n"
                 f"• 🔄 <b>Drop / Retake</b>\n"
                 f"• 🔔 <b>Class reminders</b>\n"
-                f"• 📝 <b>Homework reminders</b>\n"
                 f"• 🚀 <i>...more in Mini App!</i>"
             )
             inline_kb = {
@@ -375,7 +374,6 @@ class TimetableTelegramBot:
                 f"• ⚡ <b>Find flexible time lessons</b>\n"
                 f"• 🔄 <b>Drop / Retake</b>\n"
                 f"• 🔔 <b>Class reminders</b>\n"
-                f"• 📝 <b>Homework reminders</b>\n"
                 f"• 🚀 <i>...more in Mini App!</i>"
             )
             inline_kb = {
@@ -398,7 +396,6 @@ class TimetableTelegramBot:
             f"• ⚡ <b>Find flexible time lessons</b>\n"
             f"• 🔄 <b>Drop / Retake</b>\n"
             f"• 🔔 <b>Class reminders</b>\n"
-            f"• 📝 <b>Homework reminders</b>\n"
             f"• 🚀 <i>...more in Mini App!</i>\n\n"
             f"👉 Please enter your <b>Student ID</b> (e.g. <code>U2310010</code>) to connect:"
         )
@@ -806,7 +803,6 @@ class TimetableTelegramBot:
                     f"• ⚡ <b>Find flexible time lessons</b>\n"
                     f"• 🔄 <b>Drop / Retake</b>\n"
                     f"• 🔔 <b>Class reminders</b>\n"
-                    f"• 📝 <b>Homework reminders</b>\n"
                     f"• 🚀 <i>...more in Mini App!</i>"
                 )
                 inline_kb = {

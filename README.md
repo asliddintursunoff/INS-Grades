@@ -26,7 +26,7 @@ A modern university schedule and attendance tracking platform built with a modul
 
 ### 3. `bot/` (Telegram Bot)
 - **Runtime**: Python Async (`httpx`)
-- **Features**: Personalized schedule, week view, homework tracking, attendance alerts
+- **Features**: Personalized schedule, week view, attendance alerts
 - **Deployment**: `bot/Dockerfile` or Railway Worker
 - **Environment config**: See `bot/.env.example`
 

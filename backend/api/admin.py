@@ -15,8 +15,6 @@ from .models import (
     GroupTimetableSlot,
     ScheduleOverride,
     StudentClassEnrollment,
-    Homework,
-    HomeworkSubmission,
     LectureSession,
     Attendance,
     NotificationSettings,
@@ -57,10 +55,6 @@ class CourseClassAdmin(admin.ModelAdmin):
 class GroupTimetableSlotAdmin(admin.ModelAdmin):
     list_display = ('slot_id', 'group', 'day_of_week', 'start_time', 'end_time', 'course_class')
     list_filter = ('group', 'day_of_week')
-
-@admin.register(Homework)
-class HomeworkAdmin(admin.ModelAdmin):
-    list_display = ('homework_id', 'course_class', 'title', 'deadline')
 
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):

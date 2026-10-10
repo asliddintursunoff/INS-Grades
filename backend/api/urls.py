@@ -34,7 +34,6 @@ from .views import (
     get_admin_stats,
     get_bot_broadcast_recipients,
     link_telegram,
-    student_homework,
     student_attendance,
     ProfessorViewSet,
     GroupViewSet,
@@ -87,9 +86,6 @@ urlpatterns = [
     re_path(r'^attendance/student/(?P<student_id>[^/]+)/?$', student_attendance, name='student_attendance'),
     re_path(r'^attendance/(?P<session_id>\d+)/makeup-options/?$', session_makeup_options, name='session_makeup_options'),
     re_path(r'^attendance/(?P<session_id>\d+)/makeup/?$', session_record_makeup, name='session_record_makeup'),
-
-    # Homework
-    re_path(r'^homework/student/(?P<student_id>[^/]+)/?$', student_homework, name='student_homework'),
 
     # Notifications & Automated Class Reminders
     re_path(r'^students/(?P<student_id>[^/]+)/notification-settings/?$', student_notification_settings, name='student_notification_settings'),
