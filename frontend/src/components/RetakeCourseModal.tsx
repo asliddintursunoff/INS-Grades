@@ -118,7 +118,7 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
       setSuccessResult({ message: res.message });
       onSuccess();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Enrollment failed. Please try again.');
+      setErrorMsg(err.message || 'Could not add to your timetable. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -162,7 +162,7 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 leading-tight">
-                  Register Retake Course
+                  Add Retake to Timetable
                 </h3>
                 {catalog && (
                   <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
@@ -171,7 +171,7 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                Enroll in dropped or prior-year courses and fit them into your timetable
+                If you dropped or retook a class, you can set it in your timetable here. This only changes your timetable in this app.
               </p>
             </div>
           </div>
@@ -262,7 +262,7 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
               </div>
               <div className="space-y-1">
                 <h4 className="text-base font-bold text-slate-900">
-                  Course Retake Enrolled Successfully!
+                  Added to Your Timetable!
                 </h4>
                 <p className="text-xs text-slate-600 max-w-md mx-auto">
                   {successResult.message}
@@ -289,10 +289,10 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-bold text-slate-900">
-                  Select Course Academic Year
+                  Select Course Year
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  As a Year {catalog?.student_year} student, you can retake courses from your current year or any prior lower academic year.
+                  As a Year {catalog?.student_year} student, you can add retake classes from your current year or any lower year to your timetable.
                 </p>
               </div>
 
@@ -342,7 +342,7 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
                     Choose Subject ({getYearLabel(selectedYear!)})
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Select the subject you want to retake or enroll into
+                    Select the subject you want to add to your timetable
                   </p>
                 </div>
               </div>
@@ -432,7 +432,7 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
                   <span>{selectedSubject?.full_name}</span>
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Choose an available class section and time slot across university groups:
+                  Choose the section and time you attend to show it in your timetable:
                 </p>
               </div>
 
@@ -562,7 +562,7 @@ export const RetakeCourseModal: React.FC<RetakeCourseModalProps> = ({
                     onClick={handleConfirmEnrollment}
                     className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-xs disabled:opacity-50 shrink-0"
                   >
-                    {submitting ? 'Registering...' : 'Confirm Enrollment'}
+                    {submitting ? 'Adding...' : 'Add to My Timetable'}
                   </button>
                 </div>
               )}

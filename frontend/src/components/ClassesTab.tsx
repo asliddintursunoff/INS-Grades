@@ -76,14 +76,14 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
 
       setNotification({
         type: 'success',
-        message: `${classToDrop.subject_full} (${classToDrop.subject_short}) was dropped successfully.`,
+        message: `${classToDrop.subject_full} (${classToDrop.subject_short}) was removed from your timetable.`,
       });
       fetchClasses();
       if (onClassesUpdated) onClassesUpdated();
     } catch (err: any) {
       setNotification({
         type: 'error',
-        message: err.message || 'Failed to drop course.',
+        message: err.message || 'Failed to remove course from your timetable.',
       });
     } finally {
       setActionLoadingId(null);
@@ -101,14 +101,14 @@ export const ClassesTab: React.FC<ClassesTabProps> = ({
 
       setNotification({
         type: 'success',
-        message: `${c.subject_full} (${c.subject_short}) re-enrolled successfully.`,
+        message: `${c.subject_full} (${c.subject_short}) was added back to your timetable.`,
       });
       fetchClasses();
       if (onClassesUpdated) onClassesUpdated();
     } catch (err: any) {
       setNotification({
         type: 'error',
-        message: err.message || 'Failed to re-enroll course.',
+        message: err.message || 'Failed to add course back to your timetable.',
       });
     } finally {
       setActionLoadingId(null);

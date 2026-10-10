@@ -882,7 +882,7 @@ def student_drop_class(request, student_id):
 
     if not getattr(student, 'has_premium', False):
         return Response({
-            "error": "Kursni bekor qilish (Drop) faqat Premium foydalanuvchilar uchun mavjud.",
+            "error": "Fanni jadvaldan olib tashlash faqat Premium foydalanuvchilar uchun mavjud.",
             "requires_premium": True,
             "plan": "free",
             "price": "10 000 so'm/oyiga"
@@ -914,7 +914,7 @@ def student_drop_class(request, student_id):
             student=student, course_class_id=class_id
         ).delete()
 
-    return Response({"success": True, "message": "Course successfully dropped and removed from schedule"})
+    return Response({"success": True, "message": "Course removed from your timetable."})
 
 
 @api_view(['POST'])
@@ -927,7 +927,7 @@ def student_retake_class(request, student_id):
 
     if not getattr(student, 'has_premium', False):
         return Response({
-            "error": "Kursni qayta o'qish (Retake) faqat Premium foydalanuvchilar uchun mavjud.",
+            "error": "Fanni jadvalga qayta qo'shish faqat Premium foydalanuvchilar uchun mavjud.",
             "requires_premium": True,
             "plan": "free",
             "price": "10 000 so'm/oyiga"
@@ -962,7 +962,7 @@ def student_retake_class(request, student_id):
                 valid_to=f"session_{idx}:permanent"
             )
 
-    return Response({"success": True, "message": "Course successfully re-enrolled"})
+    return Response({"success": True, "message": "Course added back to your timetable."})
 
 
 @api_view(['GET'])
@@ -1056,7 +1056,7 @@ def student_enroll_retake(request, student_id):
 
     if not getattr(student, 'has_premium', False):
         return Response({
-            "error": "Retake kursga yozilish faqat Premium foydalanuvchilar uchun mavjud.",
+            "error": "Retake fanni jadvalga qo'shish faqat Premium foydalanuvchilar uchun mavjud.",
             "requires_premium": True,
             "plan": "free",
             "price": "10 000 so'm/oyiga"
@@ -1098,7 +1098,7 @@ def student_enroll_retake(request, student_id):
 
     return Response({
         "success": True,
-        "message": f"Successfully registered for retake course: {cc.subject.full_name} ({cc.subject.short_name})"
+        "message": f"Retake course added to your timetable: {cc.subject.full_name} ({cc.subject.short_name})"
     })
 
 
@@ -1357,7 +1357,7 @@ def student_change_group(request, student_id):
 
     if not getattr(student, 'has_premium', False):
         return Response({
-            "error": "Dars jadvali va vaqtini o'zgartirish faqat Premium foydalanuvchilar uchun mavjud.",
+            "error": "Jadvalingizni sozlash faqat Premium foydalanuvchilar uchun mavjud.",
             "requires_premium": True,
             "plan": "free",
             "price": "10 000 so'm/oyiga"
@@ -1385,7 +1385,7 @@ def student_change_group(request, student_id):
         return Response({
             "success": True,
             "mode": "reverted",
-            "message": f"Successfully reverted {subj.short_name} back to your primary group {new_class.group.group_name}."
+            "message": f"Your timetable now shows {subj.short_name} with your primary group {new_class.group.group_name} again."
         })
 
     # 1. Single Session Override
@@ -1434,7 +1434,7 @@ def student_change_group(request, student_id):
                 "success": True,
                 "mode": change_type,
                 "session_number": session_number,
-                "message": f"Successfully moved {session_label}{subj.full_name} ({subj.short_name}) to section {new_class.group.group_name}{timing_label} with Prof. {new_class.professor.full_name}."
+                "message": f"Your timetable now shows {session_label}{subj.full_name} ({subj.short_name}) with section {new_class.group.group_name}{timing_label} (Prof. {new_class.professor.full_name})."
             })
 
     # 2. Full Course Change (both sessions)
@@ -1456,7 +1456,7 @@ def student_change_group(request, student_id):
         return Response({
             "success": True,
             "mode": "permanent",
-            "message": f"Permanently moved {subj.full_name} ({subj.short_name}) to section {new_class.group.group_name} with Prof. {new_class.professor.full_name}."
+            "message": f"Your timetable now shows {subj.full_name} ({subj.short_name}) with section {new_class.group.group_name} (Prof. {new_class.professor.full_name}) for the rest of the semester."
         })
     else:
         ScheduleOverride.objects.filter(student=student, course_class__subject=subj).delete()
@@ -1474,7 +1474,7 @@ def student_change_group(request, student_id):
         return Response({
             "success": True,
             "mode": "one_time",
-            "message": f"Scheduled one-time make-up lessons with section {new_class.group.group_name} for this week."
+            "message": f"One-time make-up with section {new_class.group.group_name} added to your timetable for this week."
         })
 
 
@@ -1488,7 +1488,7 @@ def student_revert_override(request, student_id):
 
     if not getattr(student, 'has_premium', False):
         return Response({
-            "error": "Dars jadvalini o'zgartirish faqat Premium foydalanuvchilar uchun mavjud.",
+            "error": "Jadvalingizni sozlash faqat Premium foydalanuvchilar uchun mavjud.",
             "requires_premium": True,
             "plan": "free",
             "price": "10 000 so'm/oyiga"
@@ -1505,7 +1505,7 @@ def student_revert_override(request, student_id):
             ScheduleOverride.objects.filter(student=student, override_id=slot_id).delete()
         return Response({
             "success": True,
-            "message": "Successfully reverted session back to your primary group timetable."
+            "message": "Your timetable was reverted to your primary group schedule."
         })
 
     if not subject_id:
@@ -1529,7 +1529,7 @@ def student_revert_override(request, student_id):
 
     return Response({
         "success": True,
-        "message": "Successfully reverted schedule back to your primary group timetable."
+        "message": "Your timetable was reverted to your primary group schedule."
     })
 
 
@@ -1704,8 +1704,8 @@ def student_premium_manage(request, student_id):
         "price": "10 000 so'm/oyiga",
         "premium_expires_at": student.premium_expires_at.isoformat() if student.premium_expires_at else None,
         "features": [
-            "Dars vaqtlarini o'zgartirish (Make-up va Doimiy almashtirish)",
-            "Retake va Drop kurslarni boshqarish",
+            "Shaxsiy dars jadvalini sozlash (Make-up va boshqa guruh vaqtlari)",
+            "Drop / Retake fanlarni jadvalga qo'shish",
             "Telegram avtomatik dars eslatmalari",
         ]
     })

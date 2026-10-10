@@ -397,7 +397,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                                 {slot.is_one_time ? (
                                   <span>⚡ Attending with {slot.actual_group} this week only. Will revert to {slot.original_group} next week.</span>
                                 ) : (
-                                  <span>✓ Permanently attending with section {slot.actual_group} for the semester.</span>
+                                  <span>✓ Shown with section {slot.actual_group} in your timetable for the semester.</span>
                                 )}
                               </div>
                             )}
@@ -411,7 +411,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                               <button
                                 onClick={() => handleRevertSlot(slot)}
                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-                                title="Revert back to primary group schedule"
+                                title="Revert your timetable to primary group schedule"
                               >
                                 <RotateCcw className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                                 <span>{t('revert_primary')}</span>
@@ -429,7 +429,7 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                             <button
                               onClick={() => handleOpenSlotsModal(slot)}
                               className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold transition-colors shadow-2xs"
-                              title="Change class time (permanent or one-time make-up)"
+                              title="Change class time in your timetable"
                             >
                               <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                               <span>{t('change_time')}</span>
@@ -788,6 +788,8 @@ export const TimetableTab: React.FC<TimetableTabProps> = ({
                       )}
                     </p>
                   </div>
+
+                  <p className="text-[11px] text-slate-500 leading-relaxed">{t('personal_only_note')}</p>
 
                   <div className="flex items-center justify-end gap-2 pt-1">
                     <button

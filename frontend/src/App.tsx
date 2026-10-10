@@ -344,7 +344,7 @@ export default function App() {
             <span className="text-slate-500 font-medium">Student Timetable Portal</span>
           </div>
           <div className="text-[11px] text-slate-400">
-            Official Academic System
+            Personal timetable & reminders
           </div>
         </div>
       </footer>
